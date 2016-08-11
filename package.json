@@ -1,0 +1,24 @@
+{
+  "name": "http-server-spa",
+  "version": "1.0.0",
+  "description": "A simple http server with built in history-api-fallback behavior",
+  "main": "server.js",
+  "dependencies": {
+    "mime": "^1.3.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "node server test index.html 8080",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lukejacksonn/prodder.git"
+  },
+  "author": "Luke Jackson <lukejacksonn@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lukejacksonn/prodder/issues"
+  },
+  "homepage": "https://github.com/lukejacksonn/prodder#readme"
+}
