@@ -13,12 +13,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lukejacksonn/prodder.git"
+    "url": "git+https://github.com/lukejacksonn/http-server-spa.git"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/lukejacksonn/prodder/issues"
+    "url": "https://github.com/lukejacksonn/http-server-spa/issues"
   },
-  "homepage": "https://github.com/lukejacksonn/prodder#readme"
+  "homepage": "https://github.com/lukejacksonn/http-server-spa#readme"
 }
