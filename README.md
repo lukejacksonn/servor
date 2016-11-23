@@ -11,12 +11,19 @@ http-server-spa <directory> <fallback> <port>
 
 Requests to the server are categorized as one of two types:
 
+## File Request
+
 - A `file` request defined by any request url where last part of the path (after being split by the `/` delimiter) contains a `.` character.
-- A `route` request defined by any request that is not a file request.
 
 In the event of a `file` request the server tries to resolve the given path for example `/assets/image.png`. If the file exists then it is sent as a response with the appropriate mime type and a status code of `200`. If the file does not exist however, then the server responds with the status code `404`.
 
+## Route Request
+
+- A `route` request defined by any request that is not a file request.
+
 In the event of any `route` request, for example `/user/profile`, the server immediately responds with the specified `fallback` file. If the app root (just `/`) is requested then the server responds with the status code `200`. If some other route was requested then the server responds with the status code `301`.
+
+## Frontend Routing
 
 This approach presumes that your application handles routing on the frontend with javascript. There are many frontend routers out there..
 
