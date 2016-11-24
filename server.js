@@ -60,7 +60,7 @@ function sendFile(res, uri, data) {
   res.end();
 }
 
-function isRootRequest(uri) {
+function isRouteRequest(uri) {
   return uri.split('/').pop().indexOf('.') === -1 ? true : false;
 }
 
@@ -68,7 +68,7 @@ http.createServer((req, res) => {
   const uri = url.parse(req.url).pathname;
   const resource = path.join(cwd, root, uri);
   // A route was requested
-  if(isRootRequest(uri)) {
+  if(isRouteRequest(uri)) {
     sendIndex(res, uri === '/' ? 200 : 301);
     return;
   }
