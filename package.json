@@ -1,6 +1,6 @@
 {
   "name": "http-server-spa",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "A simple http server with built in history-api-fallback behavior",
   "main": "server.js",
   "dependencies": {
