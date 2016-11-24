@@ -20,8 +20,8 @@ try {
   const uri = path.join(process.cwd(), root, file);
   index = fs.readFileSync(uri);
 } catch(e) {
-  console.log(`[ERR] Could not start server, root file not found`);
-  console.log(`[TRY] http-server-spa <dir> <file> <port>`);
+  console.log(`[ERR] Could not start server, fallback file not found`);
+  console.log(`[TRY] http-server-spa <directory> <fallback> <port>`);
   process.exit();
 }
 
@@ -70,11 +70,24 @@ http.createServer((req, res) => {
   // A route was requested
   if(isRouteRequest(uri)) {
     sendIndex(res, uri === '/' ? 200 : 301);
+    console.log(`[OK] GET ${uri}`);
     return;
   }
   // A file was requested
   fs.stat(resource, function(err, stat) {
-    if (err === null) readFile(res, resource);
-    else sendNotFound(res);
+    if (err === null) {
+      readFile(res, resource);
+      console.log(`[OK] GET ${uri}`);
+    }
+    else {
+      sendNotFound(res);
+      console.log(`[ER] GET ${uri}`);
+    }
   });
 }).listen(parseInt(port, 10));
+
+console.log(`----------------------------------------------`);
+console.log(`[OK] Serving static files from ./${root}`);
+console.log(`[OK] Using the fallback file ${file}`);
+console.log(`[OK] Listening on http://localhost:${port}`);
+console.log(`----------------------------------------------`);
