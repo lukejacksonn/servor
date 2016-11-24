@@ -7,9 +7,9 @@ const mime = require('mime');
 
 // CLI arguments
 
-const root = process.argv[2]; // www
-const file = process.argv[3]; // index.html
-const port = process.argv[4]; // 8080
+const root = process.argv[2];
+const file = process.argv[3] || 'index.html';
+const port = process.argv[4] || 8080;
 const cwd = process.cwd();
 
 let index;
