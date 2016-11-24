@@ -25,6 +25,8 @@ try {
   process.exit();
 }
 
+// Server utility functions
+
 function readFile(res, uri) {
   fs.readFile(uri, 'binary', (err, file) => {
     if (err) sendError(res);
@@ -63,6 +65,8 @@ function sendFile(res, uri, data) {
 function isRouteRequest(uri) {
   return uri.split('/').pop().indexOf('.') === -1 ? true : false;
 }
+
+// Starting the server
 
 http.createServer((req, res) => {
   const uri = url.parse(req.url).pathname;
