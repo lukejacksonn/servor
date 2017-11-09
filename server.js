@@ -60,7 +60,8 @@
   }
 
   function sendFile(res, uri, data) {
-    res.writeHead(200, { 'Content-Type': mime.lookup(uri) });
+    res.writeHead(200, { 'Content-Type': mime.lookup(uri), 'Access-Control-Allow-Origin': '*' });
+    
     res.write(data, 'binary');
     res.end();
   }
