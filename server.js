@@ -73,7 +73,7 @@
 
   http.createServer((req, res) => {
     const uri = url.parse(req.url).pathname;
-    const resource = path.join(cwd, root, uri);
+    const resource = path.join(cwd, root, decodeURI(uri));
     // A route was requested
     if(isRouteRequest(uri)) {
       sendIndex(res, uri === '/' ? 200 : 301);
