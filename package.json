@@ -6,9 +6,6 @@
   "bin": {
     "http-server-spa": "./server.js"
   },
-  "dependencies": {
-    "mime": "^1.3.4"
-  },
   "scripts": {
     "test": "node server test index.html 8080",
     "start": "node server"
