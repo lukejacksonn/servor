@@ -13,6 +13,7 @@
   const root = process.argv[2];
   const file = process.argv[3] || 'index.html';
   const port = process.argv[4] || 8080;
+  const watch = process.argv.filter(x => x === '--watch').length
   const cwd = process.cwd();
 
   let index;
@@ -53,6 +54,14 @@
     if (process.env.NODE_ENV !== 'production') {
       const uri = path.join(process.cwd(), root, file);
       index = fs.readFileSync(uri);
+      if(watch) {
+        index += `
+          <script>
+            const source = new EventSource('http://localhost:5000');
+            source.onmessage = e => location.reload(true);
+          </script>
+        `
+      }
     }
     res.writeHead(status, { 'Content-Type': 'text/html' });
     res.write(index);
@@ -69,7 +78,22 @@
     return uri.split('/').pop().indexOf('.') === -1 ? true : false;
   }
 
-  // Starting the server
+  // Start watch and file servers
+
+  watch && http.createServer((request, res) => {
+    // Open the event stream for live reload
+    res.writeHead(200, {
+      Connection: 'keep-alive',
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Access-Control-Allow-Origin': '*',
+    });
+    // Watch the target directory for changes
+    fs.watch(path.join(cwd, root), { recursive: true }, (eventType, filename) => {
+      res.write(`event: message\nid: 0\ndata: ${filename} ${eventType}`);
+      res.write('\n\n');
+    })
+  }).listen(5000);
 
   http.createServer((req, res) => {
     const uri = url.parse(req.url).pathname;
@@ -81,7 +105,7 @@
       return;
     }
     // A file was requested
-    fs.stat(resource, function(err, stat) {
+    fs.stat(resource, (err, stat) => {
       if (err === null) {
         readFile(res, resource);
         console.log(`[OK] GET ${uri}`);
@@ -97,6 +121,7 @@
   console.log(`[OK] Serving static files from ./${root}`);
   console.log(`[OK] Using the fallback file ${file}`);
   console.log(`[OK] Listening on http://localhost:${port}`);
+  watch && console.log('[OK] Watching for file changes');
   console.log(`----------------------------------------------`);
 
 })();
