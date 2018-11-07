@@ -2,13 +2,13 @@
   "name": "servor",
   "version": "1.0.0",
   "description": "A dependency free dev server for single page applications",
-  "main": "./server.js",
+  "main": "./servor.js",
   "bin": {
-    "servor": "./server.js"
+    "servor": "./servor.js"
   },
   "scripts": {
-    "test": "node server test index.html 8080 --watch",
-    "start": "node server"
+    "test": "node servor test index.html 8080 --live",
+    "start": "node servor"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
   "license": "MIT"
