@@ -132,6 +132,8 @@ watch && console.log(` ♻️  Reloading the browser when files under ./${root} 
 // Open the page in the default browser
 // ----------------------------------
 
-var page = `http://localhost:${port}`;
-var open = (process.platform == 'darwin' ? 'open' : process.platform == 'win32' ? 'start' : 'xdg-open');
-require('child_process').exec(open + ' ' + page);
+setTimeout(() => {
+  const page = `http://localhost:${port}`;
+  const open = (process.platform == 'darwin' ? 'open' : process.platform == 'win32' ? 'start' : 'xdg-open');
+  require('child_process').exec(open + ' ' + page);
+}, 1000)

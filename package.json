@@ -1,23 +1,15 @@
 {
-  "name": "http-server-spa",
-  "version": "1.3.0",
-  "description": "A simple http server with built in history-api-fallback behavior",
+  "name": "servor",
+  "version": "1.0.0",
+  "description": "A dependency free dev server for single page applications",
   "main": "./server.js",
   "bin": {
-    "http-server-spa": "./server.js"
+    "servor": "./server.js"
   },
   "scripts": {
     "test": "node server test index.html 8080 --watch",
     "start": "node server"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lukejacksonn/http-server-spa.git"
-  },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/lukejacksonn/http-server-spa/issues"
-  },
-  "homepage": "https://github.com/lukejacksonn/http-server-spa#readme"
+  "license": "MIT"
 }
