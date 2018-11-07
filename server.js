@@ -1,156 +1,137 @@
 #!/usr/bin/env node
 
-(function() {
+const fs = require('fs');
+const url = require('url');
+const path = require('path');
+const http = require('http');
 
-  const fs = require('fs');
-  const url = require('url');
-  const path = require('path');
-  const http = require('http');
-  const mime = Object.entries(require('./types.json'))
-    .reduce((all, [key, vals]) =>
-      Object.assign(all, ...vals.map(ext => ({ [ext]: key }))),
-      {}
-    );
+// ----------------------------------
+// Generate map of all known mimetypes
+// ----------------------------------
 
-  // ----------------------------------
-  // Parse arguments from the command line
-  // ----------------------------------
+const mime = Object.entries(require('./types.json'))
+  .reduce((all, [key, vals]) =>
+    Object.assign(all, ...vals.map(ext => ({ [ext]: key }))),
+    {}
+  );
 
-  const root = process.argv[2];
-  const file = process.argv[3] || 'index.html';
-  const port = process.argv[4] || 8080;
-  const watch = process.argv.filter(x => x === '--watch').length
-  const cwd = process.cwd();
+// ----------------------------------
+// Template clientside reload script
+// ----------------------------------
 
-  let index;
+const reloadScript = `
+  <script>
+    const source = new EventSource('http://localhost:5000');
+    source.onmessage = e => location.reload(true);
+  </script>
+`
 
-  // ----------------------------------
-  // Try put the root file in memory
-  // ----------------------------------
+// ----------------------------------
+// Parse arguments from the command line
+// ----------------------------------
 
-  try {
-    const uri = path.join(process.cwd(), root, file);
-    index = fs.readFileSync(uri);
-  } catch(e) {
-    console.log(`[ERR] Could not start server, fallback file not found`);
-    console.log(`[TRY] http-server-spa <directory> <fallback> <port>`);
-    process.exit();
-  }
+const root = process.argv[2];
+const fallback = process.argv[3] || 'index.html';
+const port = process.argv[4] || 8080;
+const watch = process.argv.filter(x => x === '--watch').length
+const cwd = process.cwd();
 
-  // ----------------------------------
-  // Server utility functions
-  // ----------------------------------
+// ----------------------------------
+// Server utility functions
+// ----------------------------------
 
-  function readFile(res, uri) {
-    fs.readFile(uri, 'binary', (err, file) => {
-      if (err) sendError(res);
-      else sendFile(res, uri, file);
-    });
-  };
+const sendError = (res) => {
+  res.writeHead(500);
+  res.write('500 Server Error');
+  res.end();
+}
 
-  function sendError(res) {
-    res.writeHead(500);
-    res.write('500 Server Error');
-    res.end();
-  }
+const sendNotFound = (res, resource) => {
+  res.writeHead(404);
+  res.write('404 Not Found');
+  res.end();
+  console.log(' \x1b[41m', '404', '\x1b[0m', `GET ${resource}`);
+}
 
-  function sendNotFound(res) {
-    res.writeHead(404);
-    res.write('404 Not Found');
-    res.end();
-  }
+const sendFile = (res, resource, status, file, ext) => {
+  res.writeHead(status, {
+    'Content-Type': mime[ext] || "application/octet-stream"
+  });
+  res.write(file, 'binary');
+  res.end();
+  resource === `/${fallback}` && console.log('\n \x1b[44m', 'RELOADED', '\x1b[0m\n');
+  console.log(' \x1b[42m', '200', '\x1b[0m', `GET ${resource}`);
+}
 
-  function sendIndex(res, status) {
-    if (process.env.NODE_ENV !== 'production') {
-      const uri = path.join(process.cwd(), root, file);
-      index = fs.readFileSync(uri);
-      if(watch) {
-        index += `
-          <script>
-            const source = new EventSource('http://localhost:5000');
-            source.onmessage = e => location.reload(true);
-          </script>
-        `
-      }
-    }
-    res.writeHead(status, { 'Content-Type': 'text/html' });
-    res.write(index);
-    res.end();
-  }
+const isRouteRequest = (uri) => {
+  return uri.split('/').pop().indexOf('.') === -1 ? true : false;
+}
 
-  function sendFile(res, uri, data) {
-    const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase()
-    res.writeHead(200, { 'Content-Type': mime[ext] || "application/octet-stream" });
-    res.write(data, 'binary');
-    res.end();
-  }
+// ----------------------------------
+// Start file watching server
+// ----------------------------------
 
-  function isRouteRequest(uri) {
-    return uri.split('/').pop().indexOf('.') === -1 ? true : false;
-  }
-
-  // ----------------------------------
-  // Start file watching server
-  // ----------------------------------
-
-  watch && http.createServer((request, res) => {
-    // Open the event stream for live reload
-    res.writeHead(200, {
-      Connection: 'keep-alive',
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': '*',
-    });
-    let id = 0
-    // Send an initial ack event
-    res.write(`event: connected\nid: ${id++}\ndata: awaiting message\n`);
+watch && http.createServer((request, res) => {
+  // Open the event stream for live reload
+  res.writeHead(200, {
+    Connection: 'keep-alive',
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Access-Control-Allow-Origin': '*',
+  });
+  let id = 0;
+  // Send an initial ack event to stop request pending
+  res.write(`event: connected\nid: ${id++}\ndata: awaiting message\n`);
+  res.write('\n\n');
+  // Send a ping event every minute to prevent console errors
+  setInterval(() => {
+    res.write(`event: ping\nid: ${id++}\ndata: keep alive\n`);
     res.write('\n\n');
-    // Send a ping event every minute to prevent console errors
-    setInterval(() => {
-      res.write(`event: ping\nid: ${id++}\ndata: keep alive\n`);
-      res.write('\n\n');
-    }, 60000)
-    // Watch the target directory for changes and trigger reload
-    fs.watch(path.join(cwd, root), { recursive: true }, (eventType, filename) => {
-      res.write(`event: message\nid: ${id++}\ndata: ${filename} ${eventType}\n`);
-      res.write('\n\n');
-    })
-  }).listen(5000);
+  }, 60000)
+  // Watch the target directory for changes and trigger reload
+  fs.watch(path.join(cwd, root), { recursive: true }, (eventType, filename) => {
+    // console.log("\n\x1b[44m", 'RELOADING', "\x1b[0m", `${filename} ${eventType}d\n`);
+    res.write(`event: message\nid: ${id++}\ndata: ${filename} ${eventType}\n`);
+    res.write('\n\n');
+  })
+}).listen(5000);
 
-  // ----------------------------------
-  // Start static file server
-  // ----------------------------------
+// ----------------------------------
+// Start static file server
+// ----------------------------------
 
-  http.createServer((req, res) => {
-    const uri = url.parse(req.url).pathname;
-    const resource = path.join(cwd, root, decodeURI(uri));
-    // A route was requested
-    if(isRouteRequest(uri)) {
-      sendIndex(res, uri === '/' ? 200 : 301);
-      console.log(`[OK] GET ${uri}`);
-      return;
-    }
-    // A file was requested
-    fs.stat(resource, (err, stat) => {
-      if (err === null) {
-        readFile(res, resource);
-        console.log(`[OK] GET ${uri}`);
-      }
-      else {
-        sendNotFound(res);
-        console.log(`[ER] GET ${uri}`);
-      }
+http.createServer((req, res) => {
+
+  const pathname = url.parse(req.url).pathname;
+  const isRoute = isRouteRequest(pathname)
+  const status = isRoute && pathname !== '/' ? 301 : 200
+  const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
+  const uri = path.join(cwd, root, resource);
+  const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase()
+
+  fs.stat(uri, (err, stat) => {
+    if (err) return sendNotFound(res, resource)
+    fs.readFile(uri, 'binary', (err, file) => {
+      if (err) return sendError(res);
+      if (isRoute && watch) file += reloadScript;
+      sendFile(res, resource, status, file, ext)
     });
-  }).listen(parseInt(port, 10));
+  });
 
-  // ----------------------------------
-  // Log startup details to terminal
-  // ----------------------------------
+}).listen(parseInt(port, 10));
 
-  console.log(`---------------------------------------------------------`);
-  console.log(`[OK] Serving files from ./${root} on http://localhost:${port}`);
-  console.log(`[OK] Using ${file} as the fallback for route requests`);
-  watch && console.log(`[OK] Watching files and reloading the browser on changes`);
-  console.log(`---------------------------------------------------------`);
+// ----------------------------------
+// Log startup details to terminal
+// ----------------------------------
 
-})();
+console.log(`\n 🗂  Serving files from ./${root} on http://localhost:${port}`);
+console.log(` 🖥  Using ${fallback} as the fallback for route requests`);
+watch && console.log(` ♻️  Reloading the browser when files under ./${root} change`);
+
+// ----------------------------------
+// Open the page in the default browser
+// ----------------------------------
+
+var page = `http://localhost:${port}`;
+var open = (process.platform == 'darwin' ? 'open' : process.platform == 'win32' ? 'start' : 'xdg-open');
+require('child_process').exec(open + ' ' + page);

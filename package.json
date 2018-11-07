@@ -7,7 +7,7 @@
     "http-server-spa": "./server.js"
   },
   "scripts": {
-    "test": "node server test index.html 8080",
+    "test": "node server test index.html 8080 --watch",
     "start": "node server"
   },
   "repository": {
