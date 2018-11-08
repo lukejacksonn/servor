@@ -2,18 +2,21 @@
 
 > A dependency free server for single page app development
 
-A zero dependency static file server with built in live reload and history api fallback defaults for rapid single page app development. The motivation here was to learn how packages like [serve](https://github.com/zeit/serve) or [budo](https://github.com/mattdesl/budo) worked and create something similar that can be ran on the CLI via `npx` but that clean installs in a fraction of the time due to its no frills feature set and smaller overall size.
+The new and improved version of [http-server-spa](https://npmjs.com/http-server-spa). A zero dependency static file server now with built in file watching, browser reloading and history api fallback defaults to support rapid single page app development. The motivation here was to write a close to the metal package from the ground up, in a single (~120 LOC) file, employing only native node and browser APIs, to do a very specific task. Inspiration was taken from more comprehensive packages like [serve](https://github.com/zeit/serve) and [budo](https://github.com/mattdesl/budo) which both do a similarly great job.
+
+
 
 ## Features
 
 * 🗂 Serve static content like scripts, styles, images from a directory
 * 🖥 Reroute all non-file requests like `/` or `/admin` to a single file
 * ♻️ Reload the browser when project files get added, removed or modified
-* ⏱ Install using `npx` and be running in the browser in seconds
+* ⏱ Install using `npx` and be running in the browser in ~1 second
+* 📚 Readable source code that encourages learning and contribution
 
 # Usage
 
-Add `servor` as a dev dependency using `npm i servor -D` or run from the terminal:
+Add `servor` as a dev dependency using `npm i servor -D` or run in the terminal:
 
 ```
 npx servor <directory> <fallback> <port>
