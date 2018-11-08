@@ -33,7 +33,6 @@ const reloadScript = `
 const root = process.argv[2] || ".";
 const fallback = process.argv[3] || "index.html";
 const port = process.argv[4] || 8080;
-const live = process.argv.filter(x => x === "--live").length;
 const cwd = process.cwd();
 
 // ----------------------------------
@@ -77,39 +76,38 @@ const isRouteRequest = uri => {
 // Start file watching server
 // ----------------------------------
 
-live &&
-  http
-    .createServer((request, res) => {
-      // Open the event stream for live reload
-      res.writeHead(200, {
-        Connection: "keep-alive",
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Access-Control-Allow-Origin": "*"
-      });
-      let id = 0;
-      // Send an initial ack event to stop request pending
-      res.write(`event: connected\nid: ${id++}\ndata: awaiting message\n`);
+http
+  .createServer((request, res) => {
+    // Open the event stream for live reload
+    res.writeHead(200, {
+      Connection: "keep-alive",
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Access-Control-Allow-Origin": "*"
+    });
+    let id = 0;
+    // Send an initial ack event to stop request pending
+    res.write(`event: connected\nid: ${id++}\ndata: awaiting message\n`);
+    res.write("\n\n");
+    // Send a ping event every minute to prevent console errors
+    setInterval(() => {
+      res.write(`event: ping\nid: ${id++}\ndata: keep alive\n`);
       res.write("\n\n");
-      // Send a ping event every minute to prevent console errors
-      setInterval(() => {
-        res.write(`event: ping\nid: ${id++}\ndata: keep alive\n`);
+    }, 60000);
+    // Watch the target directory for changes and trigger reload
+    fs.watch(
+      path.join(cwd, root),
+      { recursive: true },
+      (eventType, filename) => {
+        // console.log("\n\x1b[44m", 'RELOADING', "\x1b[0m", `${filename} ${eventType}d\n`);
+        res.write(
+          `event: message\nid: ${id++}\ndata: ${filename} ${eventType}\n`
+        );
         res.write("\n\n");
-      }, 60000);
-      // Watch the target directory for changes and trigger reload
-      fs.watch(
-        path.join(cwd, root),
-        { recursive: true },
-        (eventType, filename) => {
-          // console.log("\n\x1b[44m", 'RELOADING', "\x1b[0m", `${filename} ${eventType}d\n`);
-          res.write(
-            `event: message\nid: ${id++}\ndata: ${filename} ${eventType}\n`
-          );
-          res.write("\n\n");
-        }
-      );
-    })
-    .listen(5000);
+      }
+    );
+  })
+  .listen(5000);
 
 // ----------------------------------
 // Start static file server
@@ -129,7 +127,7 @@ http
       // Respond with the contents of the file
       fs.readFile(uri, "binary", (err, file) => {
         if (err) return sendError(res);
-        if (isRoute && live) file += reloadScript;
+        if (isRoute) file += reloadScript;
         sendFile(res, resource, status, file, ext);
       });
     });
@@ -142,20 +140,18 @@ http
 
 console.log(`\n 🗂  Serving files from ./${root} on http://localhost:${port}`);
 console.log(` 🖥  Using ${fallback} as the fallback for route requests`);
-live &&
-  console.log(` ♻️  Reloading the browser when files under ./${root} change`);
+console.log(` ♻️  Reloading the browser when files under ./${root} change`);
 
 // ----------------------------------
 // Open the page in the default browser
 // ----------------------------------
 
-setTimeout(() => {
-  const page = `http://localhost:${port}`;
-  const open =
-    process.platform == "darwin"
-      ? "open"
-      : process.platform == "win32"
-        ? "start"
-        : "xdg-open";
-  require("child_process").exec(open + " " + page);
-}, 600);
+const page = `http://localhost:${port}`;
+const open =
+  process.platform == "darwin"
+    ? "open"
+    : process.platform == "win32"
+      ? "start"
+      : "xdg-open";
+
+require("child_process").exec(open + " " + page);

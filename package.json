@@ -7,7 +7,7 @@
     "servor": "./servor.js"
   },
   "scripts": {
-    "test": "node servor test index.html 8080 --live",
+    "test": "node servor test index.html 8080",
     "start": "node servor"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
