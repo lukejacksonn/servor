@@ -1,46 +1,44 @@
-# http-server-spa
+# Servor
 
-A small but fast static file server running on node, with built in history-api-fallback. Useful for serving up single page applications with frontend routing. You can start the server using the command line..
+
+> A dependency free server for single page app development
+
+The new and improved version of [http-server-spa](https://npmjs.com/http-server-spa). A zero dependency static file server now with built in file watching, browser reloading and history api fallback defaults to support rapid single page app development.
+
+<hr>
+
+<img src="https://user-images.githubusercontent.com/1457604/48194482-bf061a00-e37f-11e8-98d3-90d97e639c4e.gif" width="800">
+
+<hr>
+
+The motivation here was to write a close to the metal package from the ground up, in a single (~120 LOC) file, employing only native node and browser APIs, to do a very specific task. Inspiration was taken from more comprehensive packages like [serve](https://github.com/zeit/serve) and [budo](https://github.com/mattdesl/budo) which both do a similarly great job.
+
+## Features
+
+* 🗂 Serve static content like scripts, styles, images from a directory
+* 🖥 Reroute all non-file requests like `/` or `/admin` to a single file
+* ♻️ Reload the browser when project files get added, removed or modified
+* ⏱ Install using `npx` and be running in the browser in ~1 second
+* 📚 Readable source code that encourages learning and contribution
+
+## Usage
+
+Add `servor` as a dev dependency using `npm i servor -D` or run directly from the terminal:
 
 ```
-npm install http-server-spa -g
-```
-```
-http-server-spa <directory> <fallback> <port>
+npx servor <directory> <fallback> <port>
 ```
 
-Requests to the server are categorized as one of two types:
+* `<directory>` path to serve static files from (defaults to current directory `.`)
+* `<fallback>` the file served for all non-file requests (defaults to `index.html`)
+* `<port>` what port you want to serve the files from (defaults to `8080`)
 
-## File Request
+Example usage with npm scripts in a projects `package.json` file:
 
-- A `file` request defined by any request url where last part of the path (after being split by the `/` delimiter) contains a `.` character.
-
-In the event of a `file` request the server tries to resolve the given path for example `/assets/image.png`. If the file exists then it is sent as a response with the appropriate mime type and a status code of `200`. If the file does not exist however, then the server responds with the status code `404`.
-
-## Route Request
-
-- A `route` request defined by any request that is not a file request.
-
-In the event of any `route` request, for example `/user/profile`, the server immediately responds with the specified `fallback` file. If the app root (just `/`) is requested then the server responds with the status code `200`. If some other route was requested then the server responds with the status code `301`.
-
-## Frontend Routing
-
-This approach presumes that your application handles routing on the frontend with javascript. There are many frontend routers out there..
-
-- [aviator](https://github.com/swipely/aviator)
-- [navigo](https://github.com/krasimir/navigo)
-- [react-router](https://github.com/ReactTraining/react-router)
-- [ui-router](https://ui-router.github.io/)
-
-..to name a few, but if you prefer to do things yourself a frontend router can be reduced to something a simple as a switch statement that gets evaluated every time the url changes:
-
-```javascript
-window.onpopstate = () => {
-  switch (window.location.pathname) {
-    case '/': loadHomePage(); break;
-    case '/profile': loadProfilePage(); break;
+```
+{
+  scripts: {
+    start: 'npx servor www index.html 8080'
   }
 }
-history.pushState(null, null, window.location.pathname);
-window.onpopstate();
 ```

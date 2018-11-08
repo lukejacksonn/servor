@@ -1,2 +1,2 @@
-var $text = document.querySelector('p');
-$text.innerHTML = 'Loaded app route <code>' + window.location.pathname + '</code>'
+var $text = document.querySelector('h2');
+$text.innerHTML = window.location
