@@ -58,8 +58,6 @@ const sendFile = (res, resource, status, file, ext) => {
   });
   res.write(file, "binary");
   res.end();
-  resource === `/${fallback}` &&
-    console.log("\n \x1b[44m", "RELOADED", "\x1b[0m\n");
   console.log(" \x1b[42m", "200", "\x1b[0m", `GET ${resource}`);
 };
 
@@ -121,6 +119,7 @@ http
     const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
     const uri = path.join(cwd, root, resource);
     const ext = uri.replace(/^.*[\.\/\\]/, "").toLowerCase();
+    isRoute && console.log("\n \x1b[44m", "RELOADING", "\x1b[0m\n");
     // Check if files exists at the location
     fs.stat(uri, (err, stat) => {
       if (err) return sendNotFound(res, resource);
