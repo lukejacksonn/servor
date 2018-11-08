@@ -6,10 +6,10 @@ A zero dependency static file server with built in live reload and history api f
 
 ## Features
 
-– 🗂 Serve static content like scripts, styles, images from a directory
-– 🖥 Reroute all non-file requests like `/` or `/admin` to a single file
-- ♻️ Reload the browser when project files get added, removed or modified
-- ⏱ Install using `npx` and be running in the browser within a second
+* 🗂 Serve static content like scripts, styles, images from a directory
+* 🖥 Reroute all non-file requests like `/` or `/admin` to a single file
+* ♻️ Reload the browser when project files get added, removed or modified
+* ⏱ Install using `npx` and be running in the browser in a seconds
 
 Especially compliments projects that rely on platform runtime compilation (static/dynamic imports) over a build time transpile/bundle step as reloads are almost instantaneous regardless of project size.
 

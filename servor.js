@@ -30,7 +30,7 @@ const reloadScript = `
 // Parse arguments from the command line
 // ----------------------------------
 
-const root = process.argv[2];
+const root = process.argv[2] || ".";
 const fallback = process.argv[3] || "index.html";
 const port = process.argv[4] || 8080;
 const live = process.argv.filter(x => x === "--live").length;
