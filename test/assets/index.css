@@ -4,6 +4,7 @@
   margin: 0;
   padding: 0;
   border: 0;
+  color: #f2f2f2;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
@@ -11,7 +12,7 @@
 body {
   font-family: "Roboto", sans-serif;
   font-size: 16px;
-  background: white;
+  background: #212121;
   height: 100vh;
   display: flex;
   align-items: center;
@@ -26,11 +27,16 @@ style {
 }
 
 img {
-  margin-bottom: 1rem;
+  width: 10rem;
+  opacity: 0.38;
 }
 
 h1 {
-  margin-bottom: .62rem;
+  font-size: 8rem;
+}
+
+h2 {
+  color: #6f6f6f;
 }
 
 code {
