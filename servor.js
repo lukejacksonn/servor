@@ -39,36 +39,34 @@ const cwd = process.cwd();
 // Server utility functions
 // ----------------------------------
 
-const sendError = res => {
-  res.writeHead(500);
-  res.write("500 Server Error");
+const sendError = (res, resource, status) => {
+  res.writeHead(status);
   res.end();
-};
-
-const sendNotFound = (res, resource) => {
-  res.writeHead(404);
-  res.write("404 Not Found");
-  res.end();
-  console.log(" \x1b[41m", "404", "\x1b[0m", `GET ${resource}`);
+  console.log(" \x1b[41m", status, "\x1b[0m", `${resource}`);
 };
 
 const sendFile = (res, resource, status, file, ext) => {
   res.writeHead(status, {
-    "Content-Type": mime[ext] || "application/octet-stream"
+    "Content-Type": mime[ext] || "application/octet-stream",
+    "Access-Control-Allow-Origin": "*"
   });
   res.write(file, "binary");
   res.end();
-  console.log(" \x1b[42m", "200", "\x1b[0m", `GET ${resource}`);
+  console.log(" \x1b[42m", status, "\x1b[0m", `${resource}`);
 };
 
-const isRouteRequest = uri => {
-  return uri
+const sendMessage = (res, channel, data) => {
+  res.write(`event: ${channel}\nid: 0\ndata: ${data}\n`);
+  res.write("\n\n");
+};
+
+const isRouteRequest = uri =>
+  uri
     .split("/")
     .pop()
     .indexOf(".") === -1
     ? true
     : false;
-};
 
 // ----------------------------------
 // Start file watching server
@@ -83,26 +81,13 @@ http
       "Cache-Control": "no-cache",
       "Access-Control-Allow-Origin": "*"
     });
-    let id = 0;
     // Send an initial ack event to stop request pending
-    res.write(`event: connected\nid: ${id++}\ndata: awaiting message\n`);
-    res.write("\n\n");
+    sendMessage(res, "connected", "awaiting change");
     // Send a ping event every minute to prevent console errors
-    setInterval(() => {
-      res.write(`event: ping\nid: ${id++}\ndata: keep alive\n`);
-      res.write("\n\n");
-    }, 60000);
+    setInterval(sendMessage, 60000, res, "ping", "still waiting");
     // Watch the target directory for changes and trigger reload
-    fs.watch(
-      path.join(cwd, root),
-      { recursive: true },
-      (eventType, filename) => {
-        // console.log("\n\x1b[44m", 'RELOADING', "\x1b[0m", `${filename} ${eventType}d\n`);
-        res.write(
-          `event: message\nid: ${id++}\ndata: ${filename} ${eventType}\n`
-        );
-        res.write("\n\n");
-      }
+    fs.watch(path.join(cwd, root), { recursive: true }, () =>
+      sendMessage(res, "message", "reloading page")
     );
   })
   .listen(5000);
@@ -122,10 +107,10 @@ http
     isRoute && console.log("\n \x1b[44m", "RELOADING", "\x1b[0m\n");
     // Check if files exists at the location
     fs.stat(uri, (err, stat) => {
-      if (err) return sendNotFound(res, resource);
+      if (err) return sendError(res, resource, 404);
       // Respond with the contents of the file
       fs.readFile(uri, "binary", (err, file) => {
-        if (err) return sendError(res);
+        if (err) return sendError(res, resource, 500);
         if (isRoute) file += reloadScript;
         sendFile(res, resource, status, file, ext);
       });
