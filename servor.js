@@ -10,8 +10,8 @@ const http = require("http");
 // ----------------------------------
 
 const mime = Object.entries(require("./types.json")).reduce(
-  (all, [key, vals]) =>
-    Object.assign(all, ...vals.map(ext => ({ [ext]: key }))),
+  (all, [type, exts]) =>
+    Object.assign(all, ...exts.map(ext => ({ [ext]: type }))),
   {}
 );
 
