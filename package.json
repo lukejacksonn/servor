@@ -1,6 +1,6 @@
 {
   "name": "servor",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A dependency free dev server for single page applications",
   "main": "./servor.js",
   "bin": {
