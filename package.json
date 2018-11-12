@@ -1,11 +1,18 @@
 {
   "name": "servor",
   "version": "2.0.3",
-  "description": "A dependency free dev server for single page applications",
+  "description": "A dependency free dev server for single page app development",
   "main": "./servor.js",
   "bin": {
     "servor": "./servor.js"
   },
+  "keywords": [
+    "development",
+    "server",
+    "node",
+    "spa",
+    "reload"
+  ],
   "scripts": {
     "test": "node servor test index.html 8080",
     "start": "node servor"

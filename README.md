@@ -1,9 +1,9 @@
-# Servor
+# Servør
 
 
-> A dependency free server for single page app development
+> A dependency free dev server for single page app development
 
-The new and improved version of [http-server-spa](https://npmjs.com/http-server-spa). A zero dependency static file server now with built in file watching, browser reloading and history api fallback defaults to support rapid single page app development.
+The new and improved version of [http-server-spa](https://npmjs.com/http-server-spa). A zero dependency static file server with built in file watching, browser reloading and history api fallback defaults to support rapid single page app development.
 
 <hr>
 
@@ -11,7 +11,7 @@ The new and improved version of [http-server-spa](https://npmjs.com/http-server-
 
 <hr>
 
-The motivation here was to write a close to the metal package from the ground up, in a single (~120 LOC) file, employing only native node and browser APIs, to do a very specific task. Inspiration was taken from more comprehensive packages like [serve](https://github.com/zeit/serve) and [budo](https://github.com/mattdesl/budo) which both do a similarly great job.
+The motivation here was to write a close to the metal package from the ground up, in a single (~120 LOC) file and employing only native node and browser APIs to do a very specific task. Inspiration was taken from more comprehensive packages like [serve](https://github.com/zeit/serve) and [budo](https://github.com/mattdesl/budo) which both do a similarly great job.
 
 ## Features
 
