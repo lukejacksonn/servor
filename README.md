@@ -33,12 +33,12 @@ npx servor <directory> <fallback> <port>
 * `<fallback>` the file served for all non-file requests (defaults to `index.html`)
 * `<port>` what port you want to serve the files from (defaults to `8080`)
 
-Example usage with npm scripts in a projects `package.json` file:
+Example usage with npm scripts in a project's `package.json` file:
 
-```
+```json
 {
-  scripts: {
-    start: 'npx servor www index.html 8080'
+  "scripts": {
+    "start": "npx servor www index.html 8080"
   }
 }
 ```
