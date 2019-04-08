@@ -14,7 +14,7 @@
     "reload"
   ],
   "scripts": {
-    "test": "node servor test index.html 8080",
+    "test": "node servor test index.html 8080 5000",
     "start": "node servor"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",

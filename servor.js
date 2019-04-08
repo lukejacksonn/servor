@@ -16,24 +16,25 @@ const mime = Object.entries(require("./types.json")).reduce(
 );
 
 // ----------------------------------
-// Template clientside reload script
-// ----------------------------------
-
-const reloadScript = `
-  <script>
-    const source = new EventSource('http://localhost:5000');
-    source.onmessage = e => location.reload(true);
-  </script>
-`;
-
-// ----------------------------------
 // Parse arguments from the command line
 // ----------------------------------
 
 const root = process.argv[2] || ".";
 const fallback = process.argv[3] || "index.html";
 const port = process.argv[4] || 8080;
+const reloadPort = process.argv[5] || 5000;
 const cwd = process.cwd();
+
+// ----------------------------------
+// Template clientside reload script
+// ----------------------------------
+
+const reloadScript = `
+  <script>
+    const source = new EventSource('http://localhost:${reloadPort}');
+    source.onmessage = e => location.reload(true);
+  </script>
+`;
 
 // ----------------------------------
 // Server utility functions
@@ -90,7 +91,7 @@ http
       sendMessage(res, "message", "reloading page")
     );
   })
-  .listen(5000);
+  .listen(parseInt(reloadPort, 10));
 
 // ----------------------------------
 // Start static file server
