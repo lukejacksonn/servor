@@ -19,6 +19,14 @@ const mime = Object.entries(require("./types.json")).reduce(
 // Parse arguments from the command line
 // ----------------------------------
 
+const noBrowser = !!~process.argv.indexOf('--no-browser');
+// remove options from argv
+for(let i = 0; i <  process.argv.length; i++){
+	if(process.argv[i].indexOf('--') === 0){
+		process.argv.splice(i, 1);
+	}
+}
+// read commands from argv
 const root = process.argv[2] || ".";
 const fallback = process.argv[3] || "index.html";
 const port = process.argv[4] || 8080;
@@ -131,12 +139,14 @@ console.log(` ♻️  Reloading the browser when files under ./${root} change`);
 // Open the page in the default browser
 // ----------------------------------
 
-const page = `http://localhost:${port}`;
-const open =
-  process.platform == "darwin"
-    ? "open"
-    : process.platform == "win32"
-      ? "start"
-      : "xdg-open";
+if(!noBrowser){
+	const page = `http://localhost:${port}`;
+	const open =
+		process.platform == "darwin"
+			? "open"
+			: process.platform == "win32"
+			? "start"
+			: "xdg-open";
 
-require("child_process").exec(open + " " + page);
+	require("child_process").exec(open + " " + page);
+}
