@@ -19,11 +19,19 @@ const mime = Object.entries(require("./types.json")).reduce(
 // Parse arguments from the command line
 // ----------------------------------
 
-const root = process.argv[2] || ".";
-const fallback = process.argv[3] || "index.html";
-const port = process.argv[4] || 8080;
-const reloadPort = process.argv[5] || 5000;
 const cwd = process.cwd();
+const options = {
+    directory: ".",
+    fallback: "index.html",
+    port: 8080,
+    reloadPort: 5000,
+};
+const userOptions = process.argv.slice(2);
+userOptions.forEach(userOption => {
+  userOption = userOption.replace('--', '').split('=');
+
+  options[userOption[0]] = userOption[1];
+});
 
 // ----------------------------------
 // Template clientside reload script
@@ -31,7 +39,7 @@ const cwd = process.cwd();
 
 const reloadScript = `
   <script>
-    const source = new EventSource('http://localhost:${reloadPort}');
+    const source = new EventSource('http://localhost:${options.reloadPort}');
     source.onmessage = e => location.reload(true);
   </script>
 `;
@@ -87,11 +95,11 @@ http
     // Send a ping event every minute to prevent console errors
     setInterval(sendMessage, 60000, res, "ping", "still waiting");
     // Watch the target directory for changes and trigger reload
-    fs.watch(path.join(cwd, root), { recursive: true }, () =>
+    fs.watch(path.join(cwd, options.directory), { recursive: true }, () =>
       sendMessage(res, "message", "reloading page")
     );
   })
-  .listen(parseInt(reloadPort, 10));
+  .listen(parseInt(options.reloadPort, 10));
 
 // ----------------------------------
 // Start static file server
@@ -102,8 +110,8 @@ http
     const pathname = url.parse(req.url).pathname;
     const isRoute = isRouteRequest(pathname);
     const status = isRoute && pathname !== "/" ? 301 : 200;
-    const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
-    const uri = path.join(cwd, root, resource);
+    const resource = isRoute ? `/${options.fallback}` : decodeURI(pathname);
+    const uri = path.join(cwd, options.directory, resource);
     const ext = uri.replace(/^.*[\.\/\\]/, "").toLowerCase();
     isRoute && console.log("\n \x1b[44m", "RELOADING", "\x1b[0m\n");
     // Check if files exists at the location
@@ -117,21 +125,21 @@ http
       });
     });
   })
-  .listen(parseInt(port, 10));
+  .listen(parseInt(options.port, 10));
 
 // ----------------------------------
 // Log startup details to terminal
 // ----------------------------------
 
-console.log(`\n 🗂  Serving files from ./${root} on http://localhost:${port}`);
-console.log(` 🖥  Using ${fallback} as the fallback for route requests`);
-console.log(` ♻️  Reloading the browser when files under ./${root} change`);
+console.log(`\n 🗂  Serving files from ./${options.directory} on http://localhost:${options.port}`);
+console.log(` 🖥  Using ${options.fallback} as the fallback for route requests`);
+console.log(` ♻️  Reloading the browser when files under ./${options.directory} change`);
 
 // ----------------------------------
 // Open the page in the default browser
 // ----------------------------------
 
-const page = `http://localhost:${port}`;
+const page = `http://localhost:${options.port}`;
 const open =
   process.platform == "darwin"
     ? "open"
