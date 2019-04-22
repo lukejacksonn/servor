@@ -27,11 +27,18 @@ const options = {
     reloadPort: 5000,
 };
 const userOptions = process.argv.slice(2);
-userOptions.forEach(userOption => {
-  userOption = userOption.replace('--', '').split('=');
+if (/\-\-[a-zA-Z]*\=/.test(userOptions[0])) {
+  userOptions.forEach(userOption => {
+    userOption = userOption.replace('--', '').split('=');
 
-  options[userOption[0]] = userOption[1];
-});
+    options[userOption[0]] = userOption[1];
+  });
+} else {
+  options.directory = process.argv[2] || '.';
+  options.fallback = process.argv[3] || 'index.html';
+  options.port = process.argv[4] || 8080;
+  options.reloadPort = process.argv[5] || 5000;
+}
 
 // ----------------------------------
 // Template clientside reload script
