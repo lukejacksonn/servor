@@ -19,18 +19,55 @@ const mime = Object.entries(require("./types.json")).reduce(
 // Parse arguments from the command line
 // ----------------------------------
 
-const noBrowser = !!~process.argv.indexOf('--no-browser');
-// remove options from argv
-for(let i = 0; i <  process.argv.length; i++){
+const options = {
+	root: '.',
+	fallback: 'index.html',
+	port: 8080,
+	reloadPort: 5000,
+	browser: !~process.argv.indexOf('--no-browser')
+};
+
+// parse & remove options from argv
+const toRemove = [];
+for(let i = 2; i <  process.argv.length; i++){
 	if(process.argv[i].indexOf('--') === 0){
-		process.argv.splice(i, 1);
+		// get option name and convert it from kebab-case to camelCase
+		const optionName = process.argv[i].substr(2)
+			.replace(/-([a-z])/g, function(match, char){
+				return char.toUpperCase();
+			});
+		// get option value
+		if(
+			typeof options[optionName] !== 'undefined'
+			&& typeof process.argv[i + 1] !== 'undefined'
+			&& !~process.argv[i + 1].indexOf('--')
+		){
+			options[optionName] = process.argv[i + 1];
+			toRemove.unshift(i);
+			i++;
+		}
+		toRemove.unshift(i);
 	}
 }
+
+// remove options from argv (removing them before could break the loop above)
+for(let i = 0; i < toRemove.length; i++){
+	process.argv.splice(toRemove[i], 1);
+}
+
 // read commands from argv
-const root = process.argv[2] || ".";
-const fallback = process.argv[3] || "index.html";
-const port = process.argv[4] || 8080;
-const reloadPort = process.argv[5] || 5000;
+if(typeof process.argv[2] !== 'undefined'){
+	options.root = process.argv[2];
+}
+if(typeof process.argv[3] !== 'undefined'){
+	options.fallback = process.argv[3];
+}
+if(typeof process.argv[4] !== 'undefined'){
+	options.port = process.argv[4];
+}
+if(typeof process.argv[5] !== 'undefined'){
+	options.reloadPort = process.argv[5];
+}
 const cwd = process.cwd();
 
 // ----------------------------------
@@ -39,8 +76,8 @@ const cwd = process.cwd();
 
 const reloadScript = `
   <script>
-    const source = new EventSource('http://localhost:${reloadPort}');
-    source.onmessage = e => location.reload(true);
+    const source = new EventSource('http://localhost:${options.reloadPort}');
+    source.onmessage = () => location.reload(true);
   </script>
 `;
 
@@ -73,9 +110,7 @@ const isRouteRequest = uri =>
   uri
     .split("/")
     .pop()
-    .indexOf(".") === -1
-    ? true
-    : false;
+    .indexOf(".") === -1;
 
 // ----------------------------------
 // Start file watching server
@@ -95,11 +130,11 @@ http
     // Send a ping event every minute to prevent console errors
     setInterval(sendMessage, 60000, res, "ping", "still waiting");
     // Watch the target directory for changes and trigger reload
-    fs.watch(path.join(cwd, root), { recursive: true }, () =>
+    fs.watch(path.join(cwd, options.root), { recursive: true }, () =>
       sendMessage(res, "message", "reloading page")
     );
   })
-  .listen(parseInt(reloadPort, 10));
+  .listen(parseInt(options.reloadPort, 10));
 
 // ----------------------------------
 // Start static file server
@@ -110,12 +145,12 @@ http
     const pathname = url.parse(req.url).pathname;
     const isRoute = isRouteRequest(pathname);
     const status = isRoute && pathname !== "/" ? 301 : 200;
-    const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
-    const uri = path.join(cwd, root, resource);
-    const ext = uri.replace(/^.*[\.\/\\]/, "").toLowerCase();
+    const resource = isRoute ? `/${options.fallback}` : decodeURI(pathname);
+    const uri = path.join(cwd, options.root, resource);
+    const ext = uri.replace(/^.*[.\/\\]/, "").toLowerCase();
     isRoute && console.log("\n \x1b[44m", "RELOADING", "\x1b[0m\n");
     // Check if files exists at the location
-    fs.stat(uri, (err, stat) => {
+    fs.stat(uri, (err) => {
       if (err) return sendError(res, resource, 404);
       // Respond with the contents of the file
       fs.readFile(uri, "binary", (err, file) => {
@@ -125,26 +160,26 @@ http
       });
     });
   })
-  .listen(parseInt(port, 10));
+  .listen(parseInt(options.port, 10));
 
 // ----------------------------------
 // Log startup details to terminal
 // ----------------------------------
 
-console.log(`\n 🗂  Serving files from ./${root} on http://localhost:${port}`);
-console.log(` 🖥  Using ${fallback} as the fallback for route requests`);
-console.log(` ♻️  Reloading the browser when files under ./${root} change`);
+console.log(`\n 🗂  Serving files from ./${options.root} on http://localhost:${options.port}`);
+console.log(` 🖥  Using ${options.fallback} as the fallback for route requests`);
+console.log(` ♻️  Reloading the browser when files under ./${options.root} change`);
 
 // ----------------------------------
 // Open the page in the default browser
 // ----------------------------------
 
-if(!noBrowser){
-	const page = `http://localhost:${port}`;
+if(options.browser){
+	const page = `http://localhost:${options.port}`;
 	const open =
-		process.platform == "darwin"
+		process.platform === "darwin"
 			? "open"
-			: process.platform == "win32"
+			: process.platform === "win32"
 			? "start"
 			: "xdg-open";
 
