@@ -26,13 +26,22 @@ The motivation here was to write a close to the metal package from the ground up
 Add `servor` as a dev dependency using `npm i servor -D` or run directly from the terminal:
 
 ```
-npx servor <directory> <fallback> <port> <reloadPort>
+npx servor <directory> <fallback> <port> <reloadPort> <browser>
 ```
 
 * `<directory>` path to serve static files from (defaults to current directory `.`)
 * `<fallback>` the file served for all non-file requests (defaults to `index.html`)
 * `<port>` what port you want to serve the files from (defaults to `8080`)
 * `<reloadPort>` what port you want the reload script to listen on (defaults to `5000`)
+* `<browser>` wether to open the browser after starting the server (accepts `no` defaults to `yes`)
+
+It is possible to pass in all the options above as named as well as positional arguments for example:
+
+```
+$ npx servor www index.html --port 1337 --browser no
+```
+
+> **NOTE:** Named arguments will always take presedence over positional arguments.
 
 Example usage with npm scripts in a project's `package.json` file:
 

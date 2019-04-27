@@ -19,10 +19,30 @@ const mime = Object.entries(require("./types.json")).reduce(
 // Parse arguments from the command line
 // ----------------------------------
 
-const root = process.argv[2] || ".";
-const fallback = process.argv[3] || "index.html";
-const port = process.argv[4] || 8080;
-const reloadPort = process.argv[5] || 5000;
+const defaults = {
+  root: ".",
+  fallback: "index.html",
+  port: 8080,
+  reloadPort: 5000,
+  browser: 'yes'
+};
+
+const input = process.argv.slice(2).join(" ");
+// Extract positional arguments
+const args = input.replace(/--([^\s]*)\s[^\s]*(\s)?/g, "").trim().split(" ");
+// Extract named arguments
+const named = (input.match(/--([^\s]*)\s[^\s]*/g, "") || []).reduce((a, b) => {
+  const [key, value] = b.split(" ");
+  return Object.assign(a, { [key.replace("--", "")]: value });
+}, {});
+
+const options = Object.entries(defaults).reduce(
+  (opts, [key, val], i) =>
+    Object.assign(opts, { [key]: named[key] || args[i] || val }),
+  {}
+);
+
+const { root, fallback, port, reloadPort, browser } = options;
 const cwd = process.cwd();
 
 // ----------------------------------
@@ -136,7 +156,7 @@ const open =
   process.platform == "darwin"
     ? "open"
     : process.platform == "win32"
-      ? "start"
-      : "xdg-open";
+    ? "start"
+    : "xdg-open";
 
-require("child_process").exec(open + " " + page);
+browser !== 'no' && require("child_process").exec(open + " " + page);
