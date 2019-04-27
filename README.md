@@ -25,7 +25,7 @@ The motivation here was to write a close to the metal package from the ground up
 Add `servor` as a dev dependency using `npm i servor -D` or run directly from the terminal:
 
 ```
-npx servor <directory> <fallback> <port> <reloadPort> <browser>
+npx servor <directory> <fallback> <port> <reloadPort>
 ```
 
 - `<directory>` path to serve static files from (defaults to current directory `.`)
