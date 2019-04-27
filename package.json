@@ -15,7 +15,7 @@
     "reload"
   ],
   "scripts": {
-    "test": "node servor test index.html 8080 5000",
+    "test": "node servor --directory=\"test\" --fallback=\"index.html\" --port=\"8080\" --reloadPort=\"5000\"",
     "start": "node servor"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",

@@ -68,7 +68,7 @@ if(typeof process.argv[4] !== 'undefined'){
 if(typeof process.argv[5] !== 'undefined'){
 	options.reloadPort = process.argv[5];
 }
-const cwd = process.cwd();
+
 
 // ----------------------------------
 // Template clientside reload script
