@@ -19,15 +19,15 @@ const mime = Object.entries(require('./types.json')).reduce(
 // Parse arguments from the command line
 // ----------------------------------
 
-const args = process.argv.slice(2).filter(x => !~x.indexOf('--'))
+const args = process.argv.slice(2).filter(x => !x.startsWith('--'))
 
 const root = args[0] || '.'
 const fallback = args[1] || 'index.html'
 const port = args[2] || 8080
 const reloadPort = args[3] || 5000
 
-const browser = !~process.argv.indexOf('--no-browser')
-const reload = !~process.argv.indexOf('--no-reload')
+const browser = !process.argv.includes('--no-browser')
+const reload = !process.argv.includes('--no-reload')
 
 const cwd = process.cwd()
 
