@@ -21,15 +21,29 @@ const mime = Object.entries(require('./types.json')).reduce(
 
 const args = process.argv.slice(2).filter(x => !~x.indexOf('--'))
 
-const root = args[0] || '.'
+const cwd = process.cwd();
+const slash = `(?:\\/|\\\\)`;
+const [public,root,ignore] = (args[0] || '.').match(/([^\!]*)(?:\!(.*)){0,}/)
+/**
+ * create expressions to ignore changes in a folder or file
+ * @example 
+ * servor test!assets,index.html
+ */
+const ignores = (ignore ? ignore.replace(/\//g,slash+"{1,2}").split(/ *, */) : []).map(folder=>{
+  if(/\..+/.test(folder)){
+    folder = folder.replace(/\./g,"\\.")+"$";
+  }else{
+    folder  = `${folder}${slash}{1,2}.*`;
+  }
+  return RegExp(`^${slash}{0,1}`+folder);
+});
+
 const fallback = args[1] || 'index.html'
 const port = args[2] || 8080
 const reloadPort = args[3] || 5000
 
 const browser = !~process.argv.indexOf('--no-browser')
 const reload = !~process.argv.indexOf('--no-reload')
-
-const cwd = process.cwd()
 
 // ----------------------------------
 // Template clientside reload script
@@ -78,7 +92,6 @@ const isRouteRequest = uri =>
 // ----------------------------------
 // Start file watching server
 // ----------------------------------
-
 reload &&
   http
     .createServer((request, res) => {
@@ -94,9 +107,11 @@ reload &&
       // Send a ping event every minute to prevent console errors
       setInterval(sendMessage, 60000, res, 'ping', 'still waiting')
       // Watch the target directory for changes and trigger reload
-      fs.watch(path.join(cwd, root), { recursive: true }, () =>
+      fs.watch(path.join(cwd, root), { recursive: true }, (event,file) =>{
+        // check if the change should be ignored
+        if(ignores.some((reg)=>reg.test(file)))return;
         sendMessage(res, 'message', 'reloading page')
-      )
+      })
     })
     .listen(parseInt(reloadPort, 10))
 
