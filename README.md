@@ -28,14 +28,14 @@ Add `servor` as a dev dependency using `npm i servor -D` or run directly from th
 npx servor <directory> <fallback> <port> <reloadPort>
 ```
 
-- `<directory>` path to serve static files from (defaults to current directory `.`)
+- `<directory>` path to serve static files from (defaults to current directory `.`), you can declare using the wildcard `!`, to indicate which folders or files to ignore for the reload, `public!img,ignore.js`
 - `<fallback>` the file served for all non-file requests (defaults to `index.html`)
 - `<port>` what port you want to serve the files from (defaults to `8080`)
 - `<reloadPort>` what port you want the reload script to listen on (defaults to `5000`)
 
 There are also optional flags you can pass as arguments:
 
-- `--no-browser` prevents the browser from opening when the server starts
+- `--no-browser` prevents the browgitser from opening when the server starts
 - `--no-reload` prevents the browser from reloading when files change
 
 Example usage with npm scripts in a project's `package.json` file:
