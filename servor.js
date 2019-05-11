@@ -23,13 +23,13 @@ const args = process.argv.slice(2).filter(x => !~x.indexOf('--'))
 
 const cwd = process.cwd();
 const slash = `(?:\\/|\\\\)`;
-const [public,root,ignore] = (args[0] || '.').match(/([^\!]*)(?:\!(.*)){0,}/)
+const [root,ignore=""] = (args[0] || '.').split("!")
 /**
  * create expressions to ignore changes in a folder or file
  * @example 
  * servor test!assets,index.html
  */
-const ignores = (ignore ? ignore.replace(/\//g,slash+"{1,2}").split(/ *, */) : []).map(folder=>{
+const ignores =  ignore.replace(/\//g,slash+"{1,2}").split(/ *, */).map(folder=>{
   if(/\..+/.test(folder)){
     folder = folder.replace(/\./g,"\\.")+"$";
   }else{
