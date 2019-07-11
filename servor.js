@@ -3,7 +3,9 @@
 const fs = require('fs')
 const url = require('url')
 const path = require('path')
-const http = require('http')
+const https = require('https')
+const http2 = require('http2')
+const selfsigned = require('selfsigned')
 
 // ----------------------------------
 // Generate map of all known mimetypes
@@ -37,7 +39,7 @@ const cwd = process.cwd()
 
 const reloadScript = `
   <script>
-    const source = new EventSource('http://localhost:${reloadPort}');
+    const source = new EventSource('https://localhost:${reloadPort}');
     source.onmessage = e => location.reload(true);
   </script>
 `
@@ -79,71 +81,81 @@ const isRouteRequest = uri =>
 // Start file watching server
 // ----------------------------------
 
-reload &&
-  http
-    .createServer((request, res) => {
-      // Open the event stream for live reload
-      res.writeHead(200, {
-        Connection: 'keep-alive',
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Access-Control-Allow-Origin': '*',
+const attrs = [{ name: 'commonName', value: 'localhost' }]
+selfsigned.generate(attrs, { days: 365 }, function (err, pems) {
+  if(err) return console.error("Error creating certs!", err)
+
+  const serverOptions = {
+    cert: pems.cert,
+    key: pems.private,
+  }
+  
+  reload &&
+    https
+      .createServer(serverOptions, (request, res) => {
+        // Open the event stream for live reload
+        res.writeHead(200, {
+          Connection: 'keep-alive',
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Access-Control-Allow-Origin': '*',
+        })
+        // Send an initial ack event to stop request pending
+        sendMessage(res, 'connected', 'awaiting change')
+        // Send a ping event every minute to prevent console errors
+        setInterval(sendMessage, 60000, res, 'ping', 'still waiting')
+        // Watch the target directory for changes and trigger reload
+        fs.watch(path.join(cwd, root), { recursive: true }, () =>
+          sendMessage(res, 'message', 'reloading page')
+        )
       })
-      // Send an initial ack event to stop request pending
-      sendMessage(res, 'connected', 'awaiting change')
-      // Send a ping event every minute to prevent console errors
-      setInterval(sendMessage, 60000, res, 'ping', 'still waiting')
-      // Watch the target directory for changes and trigger reload
-      fs.watch(path.join(cwd, root), { recursive: true }, () =>
-        sendMessage(res, 'message', 'reloading page')
-      )
-    })
-    .listen(parseInt(reloadPort, 10))
+      .listen(parseInt(reloadPort, 10))
 
-// ----------------------------------
-// Start static file server
-// ----------------------------------
+  // ----------------------------------
+  // Start static file server
+  // ----------------------------------
 
-http
-  .createServer((req, res) => {
-    const pathname = url.parse(req.url).pathname
-    const isRoute = isRouteRequest(pathname)
-    const status = isRoute && pathname !== '/' ? 301 : 200
-    const resource = isRoute ? `/${fallback}` : decodeURI(pathname)
-    const uri = path.join(cwd, root, resource)
-    const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase()
-    isRoute && console.log('\n \x1b[44m', 'RELOADING', '\x1b[0m\n')
-    // Check if files exists at the location
-    fs.stat(uri, (err, stat) => {
-      if (err) return sendError(res, resource, 404)
-      // Respond with the contents of the file
-      fs.readFile(uri, 'binary', (err, file) => {
-        if (err) return sendError(res, resource, 500)
-        if (isRoute && reload) file += reloadScript
-        sendFile(res, resource, status, file, ext)
+  http2
+    .createSecureServer(serverOptions, (req, res) => {
+      const pathname = url.parse(req.url).pathname
+      const isRoute = isRouteRequest(pathname)
+      const status = isRoute && pathname !== '/' ? 301 : 200
+      const resource = isRoute ? `/${fallback}` : decodeURI(pathname)
+      const uri = path.join(cwd, root, resource)
+      const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase()
+      isRoute && console.log('\n \x1b[44m', 'RELOADING', '\x1b[0m\n')
+      // Check if files exists at the location
+      fs.stat(uri, (err, stat) => {
+        if (err) return sendError(res, resource, 404)
+        // Respond with the contents of the file
+        fs.readFile(uri, 'binary', (err, file) => {
+          if (err) return sendError(res, resource, 500)
+          if (isRoute && reload) file += reloadScript
+          sendFile(res, resource, status, file, ext)
+        })
       })
     })
-  })
-  .listen(parseInt(port, 10))
+    .listen(parseInt(port, 10))
 
-// ----------------------------------
-// Log startup details to terminal
-// ----------------------------------
+  // ----------------------------------
+  // Log startup details to terminal
+  // ----------------------------------
 
-console.log(`\n 🗂  Serving files from ./${root} on http://localhost:${port}`)
-console.log(` 🖥  Using ${fallback} as the fallback for route requests`)
-console.log(` ♻️  Reloading the browser when files under ./${root} change`)
+  console.log(`\n 🗂  Serving files from ./${root} on https://localhost:${port}`)
+  console.log(` 🖥  Using ${fallback} as the fallback for route requests`)
+  console.log(` ♻️  Reloading the browser when files under ./${root} change`)
 
-// ----------------------------------
-// Open the page in the default browser
-// ----------------------------------
+  // ----------------------------------
+  // Open the page in the default browser
+  // ----------------------------------
 
-const page = `http://localhost:${port}`
-const open =
-  process.platform == 'darwin'
-    ? 'open'
-    : process.platform == 'win32'
-    ? 'start'
-    : 'xdg-open'
+  const page = `https://localhost:${port}`
+  const open =
+    process.platform == 'darwin'
+      ? 'open'
+      : process.platform == 'win32'
+      ? 'start'
+      : 'xdg-open'
 
-browser && require('child_process').exec(open + ' ' + page)
+  browser && require('child_process').exec(open + ' ' + page)
+})
