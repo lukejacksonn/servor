@@ -132,15 +132,11 @@ http
 // ----------------------------------
 // Get available IP addresses
 // ----------------------------------
-const ips = [];
 const interfaces = require('os').networkInterfaces();
-for (const interface in interfaces) {
-  interfaces[interface].forEach(ip => {
-    if (ip.family === 'IPv4' && ip.internal === false) {
-      ips.push(ip.address);
-    }
-  });
-}
+const ips = Object.values(interfaces)
+  .flat()
+  .filter(ip => ip.family === 'IPv4' && ip.internal === false)
+  .map(ip => `http://${ip.address}:${port}`);
 
 // ----------------------------------
 // Log startup details to terminal
@@ -150,11 +146,7 @@ console.log(`\n 🗂  Serving files from ./${root} on http://localhost:${port}`)
 console.log(` 🖥  Using ${fallback} as the fallback for route requests`);
 console.log(` ♻️  Reloading the browser when files under ./${root} change`);
 if (ips.length > 0) {
-  console.log(
-    ` 📡  Available on your network on http://${ips.join(
-      `:${port}, http://`
-    )}:${port}`
-  );
+  console.log(` 📡  Available on your network on ${ips.join(', ')}`);
 }
 
 // ----------------------------------
