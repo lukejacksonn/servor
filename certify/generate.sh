@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
 
-# Make sure this script is run as root
-if [ "$EUID" -ne 0 ] ; then
-        echo "Please run as root. Try again by typing: sudo !!"
-    exit
-fi
-
 function command_exists () {
     type "$1" &> /dev/null ;
 }
@@ -24,7 +18,7 @@ if [ ! -d "tmp" ]; then
 fi
 
 # Cleanup files from previous runs
-rm ../*.crt ../*.key
+rm ../*.crt ../*.key &>/dev/null
 
 # Remove any lines that start with CN
 sed -i '' '/^CN/ d' ca-options.conf
@@ -57,5 +51,3 @@ rm ../servorCA.pem
 # The username behind sudo, to give ownership back
 user=$( who am i | awk '{ print $1 }')
 chown -R "$user" ..
-
-# echo "All done!"
