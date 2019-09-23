@@ -37,7 +37,7 @@ const cwd = process.cwd();
 
 const reloadScript = `
   <script>
-    const source = new EventSource('http://localhost:${reloadPort}');
+    const source = new EventSource('http://'+location.hostname+':${reloadPort}');
     source.onmessage = e => location.reload(true);
   </script>
 `;
@@ -79,7 +79,7 @@ const isRouteRequest = uri =>
 // Start file watching server
 // ----------------------------------
 
-let fileWatcher;
+let fileWatchers = [];
 
 reload &&
   http
@@ -92,16 +92,19 @@ reload &&
         'Access-Control-Allow-Origin': '*'
       });
       // Send an initial ack event to stop any network request pending
-      sendMessage(res, 'connected', 'awaiting change');
+      sendMessage(res, 'connected', 'ready');
       // Send a ping event every minute to prevent console errors
-      setInterval(sendMessage, 60000, res, 'ping', 'still waiting');
-      // Watch the target directory for changes and trigger reload
-      fileWatcher && fileWatcher.close();
-      fileWatcher = fs.watch(path.join(cwd, root), { recursive: true }, () =>
-        sendMessage(res, 'message', 'reloading page')
-      );
+      setInterval(sendMessage, 60000, res, 'ping', 'waiting');
+      // Register connection to be notified of file changes
+      fileWatchers.push(res);
     })
     .listen(parseInt(reloadPort, 10));
+
+// Watch the target directory for changes and trigger reloads
+fs.watch(path.join(cwd, root), { recursive: true }, () => {
+  while (fileWatchers.length > 0)
+    sendMessage(fileWatchers.pop(), 'message', 'reloading');
+});
 
 // ----------------------------------
 // Start static file server
