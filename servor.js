@@ -130,10 +130,20 @@ http
   .listen(parseInt(port, 10));
 
 // ----------------------------------
+// Get available IP addresses
+// ----------------------------------
+const interfaces = require('os').networkInterfaces();
+const ips = Object.values(interfaces)
+  .reduce((a, b) => [...a, ...b], [])
+  .filter(ip => ip.family === 'IPv4' && ip.internal === false)
+  .map(ip => `http://${ip.address}:${port}`);
+
+// ----------------------------------
 // Log startup details to terminal
 // ----------------------------------
 
 console.log(`\n 🗂  Serving files from ./${root} on http://localhost:${port}`);
+ips.length > 0 && console.log(` 📡 Exposed to the network on ${ips[0]}`);
 console.log(` 🖥  Using ${fallback} as the fallback for route requests`);
 console.log(` ♻️  Reloading the browser when files under ./${root} change`);
 
