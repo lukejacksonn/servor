@@ -134,7 +134,7 @@ http
 // ----------------------------------
 const interfaces = require('os').networkInterfaces();
 const ips = Object.values(interfaces)
-  .flat()
+  .reduce((a, b) => [...a, ...b], [])
   .filter(ip => ip.family === 'IPv4' && ip.internal === false)
   .map(ip => `http://${ip.address}:${port}`);
 
@@ -143,11 +143,9 @@ const ips = Object.values(interfaces)
 // ----------------------------------
 
 console.log(`\n 🗂  Serving files from ./${root} on http://localhost:${port}`);
+ips.length > 0 && console.log(` 📡 Exposed to the network on ${ips[0]}`);
 console.log(` 🖥  Using ${fallback} as the fallback for route requests`);
 console.log(` ♻️  Reloading the browser when files under ./${root} change`);
-if (ips.length > 0) {
-  console.log(` 📡  Available on your network on ${ips.join(', ')}`);
-}
 
 // ----------------------------------
 // Open the page in the default browser
