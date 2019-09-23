@@ -3,7 +3,7 @@
 const fs = require('fs');
 const url = require('url');
 const path = require('path');
-const http = require('http');
+const http = require('https');
 
 // ----------------------------------
 // Generate map of all known mimetypes
@@ -31,13 +31,18 @@ const reload = !~process.argv.indexOf('--no-reload');
 
 const cwd = process.cwd();
 
+const ssl = {
+  cert: fs.readFileSync('servor.crt'),
+  key: fs.readFileSync('servor.key')
+};
+
 // ----------------------------------
 // Template clientside reload script
 // ----------------------------------
 
 const reloadScript = `
   <script>
-    const source = new EventSource('http://'+location.hostname+':${reloadPort}');
+    const source = new EventSource('https://'+location.hostname+':${reloadPort}');
     source.onmessage = e => location.reload(true);
   </script>
 `;
@@ -83,7 +88,7 @@ let fileWatchers = [];
 
 reload &&
   http
-    .createServer((request, res) => {
+    .createServer(ssl, (request, res) => {
       // Open the event stream for live reload
       res.writeHead(200, {
         Connection: 'keep-alive',
@@ -111,7 +116,7 @@ fs.watch(path.join(cwd, root), { recursive: true }, () => {
 // ----------------------------------
 
 http
-  .createServer((req, res) => {
+  .createServer(ssl, (req, res) => {
     const pathname = url.parse(req.url).pathname;
     const isRoute = isRouteRequest(pathname);
     const status = isRoute && pathname !== '/' ? 301 : 200;
@@ -139,13 +144,13 @@ const interfaces = require('os').networkInterfaces();
 const ips = Object.values(interfaces)
   .reduce((a, b) => [...a, ...b], [])
   .filter(ip => ip.family === 'IPv4' && ip.internal === false)
-  .map(ip => `http://${ip.address}:${port}`);
+  .map(ip => `https://${ip.address}:${port}`);
 
 // ----------------------------------
 // Log startup details to terminal
 // ----------------------------------
 
-console.log(`\n 🗂  Serving files from ./${root} on http://localhost:${port}`);
+console.log(`\n 🗂  Serving files from ./${root} on https://localhost:${port}`);
 ips.length > 0 && console.log(` 📡 Exposed to the network on ${ips[0]}`);
 console.log(` 🖥  Using ${fallback} as the fallback for route requests`);
 console.log(` ♻️  Reloading the browser when files under ./${root} change`);
@@ -154,7 +159,7 @@ console.log(` ♻️  Reloading the browser when files under ./${root} change`);
 // Open the page in the default browser
 // ----------------------------------
 
-const page = `http://localhost:${port}`;
+const page = `https://localhost:${port}`;
 const open =
   process.platform == 'darwin'
     ? 'open'

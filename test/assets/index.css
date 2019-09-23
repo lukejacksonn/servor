@@ -10,7 +10,7 @@
 }
 
 body {
-  font-family: 'Roboto', sans-serif;
+  font-family: "Roboto", sans-serif;
   font-size: 16px;
   background: #212121;
   height: 100vh;
@@ -27,18 +27,16 @@ style {
 }
 
 img {
-  width: 30vmin;
+  width: 10rem;
   opacity: 0.38;
 }
 
 h1 {
-  font-size: 20vmin;
+  font-size: 8rem;
 }
 
 h2 {
   color: #6f6f6f;
-  font-size: 4vmin;
-  font-weight: normal;
 }
 
 code {
