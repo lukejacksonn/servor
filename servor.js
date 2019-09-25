@@ -150,12 +150,14 @@ server((req, res) => {
 
 // Log startup details to terminal
 
-console.log(`\n 🗂  Serving ${root} on ${protocol}://localhost:${port}`);
-ips
-  .map(i => `${protocol}://${i.address}:${port}`)
-  .forEach(ip => console.log(` 📡 Exposed to the network on ${ip}`));
-console.log(` 🖥  Using ${fallback} for route requests`);
-reload && console.log(` ♻️  Live reloading the browser when files change`);
+console.log(`
+ 🗂  Serving ${root} on ${protocol}://localhost:${port}
+ ${ips
+   .map(ip => `📡 Exposed on ${protocol}://${ip.address}:${port}`)
+   .join('\n')}
+ 🖥  Using ${fallback} to handle route requests
+ ${reload && `♻️  Live reloading the browser when files change`}
+`);
 
 // Open the page in the default browser
 
