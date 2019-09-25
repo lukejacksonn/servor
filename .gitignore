@@ -2,4 +2,6 @@
 *.pem
 *.crt
 
+ngrok.yml
+
 .DS_Store

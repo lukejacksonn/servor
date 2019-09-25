@@ -57,7 +57,7 @@ try {
 
 const reloadScript = `
   <script>
-    const source = new EventSource('${protocol}://'+location.hostname+':${reloadPort}');
+    const source = new EventSource('/livereload');
     source.onmessage = e => location.reload(true);
   </script>
 `;
@@ -101,8 +101,19 @@ const isRouteRequest = uri =>
 
 let fileWatchers = [];
 
-reload &&
-  server((req, res) => {
+// Watch the target directory for changes and trigger reloads
+fs.watch(path.join(cwd, root), { recursive: true }, () => {
+  while (fileWatchers.length > 0)
+    sendMessage(fileWatchers.pop(), 'message', 'reloading');
+});
+
+// ----------------------------------
+// Start static file server
+// ----------------------------------
+
+server((req, res) => {
+  const pathname = url.parse(req.url).pathname;
+  if (pathname === '/livereload') {
     // Open the event stream for live reload
     res.writeHead(200, {
       Connection: 'keep-alive',
@@ -116,37 +127,25 @@ reload &&
     setInterval(sendMessage, 60000, res, 'ping', 'waiting');
     // Register connection to be notified of file changes
     fileWatchers.push(res);
-  }).listen(parseInt(reloadPort, 10));
-
-// Watch the target directory for changes and trigger reloads
-fs.watch(path.join(cwd, root), { recursive: true }, () => {
-  while (fileWatchers.length > 0)
-    sendMessage(fileWatchers.pop(), 'message', 'reloading');
-});
-
-// ----------------------------------
-// Start static file server
-// ----------------------------------
-
-server((req, res) => {
-  const pathname = url.parse(req.url).pathname;
-  const isRoute = isRouteRequest(pathname);
-  const status = isRoute && pathname !== '/' ? 301 : 200;
-  const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
-  const uri = path.join(cwd, root, resource);
-  const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
-  isRoute && console.log('\n \x1b[44m', 'RELOADING', '\x1b[0m\n');
-  // Check if files exists at the location
-  fs.stat(uri, (err, stat) => {
-    if (err) return sendError(res, resource, 404);
-    // Respond with the contents of the file
-    fs.readFile(uri, 'binary', (err, file) => {
-      if (err) return sendError(res, resource, 500);
-      if (isRoute && reload) file += reloadScript;
-      sendFile(res, resource, status, file, ext);
+  } else {
+    const isRoute = isRouteRequest(pathname);
+    const status = isRoute && pathname !== '/' ? 301 : 200;
+    const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
+    const uri = path.join(cwd, root, resource);
+    const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
+    isRoute && console.log('\n \x1b[44m', 'RELOADING', '\x1b[0m\n');
+    // Check if files exists at the location
+    fs.stat(uri, (err, stat) => {
+      if (err) return sendError(res, resource, 404);
+      // Respond with the contents of the file
+      fs.readFile(uri, 'binary', (err, file) => {
+        if (err) return sendError(res, resource, 500);
+        if (isRoute && reload) file += reloadScript;
+        sendFile(res, resource, status, file, ext);
+      });
     });
-  });
-}, true).listen(parseInt(port, 10));
+  }
+}).listen(parseInt(port, 10));
 
 // ----------------------------------
 // Get available IP addresses
@@ -170,6 +169,8 @@ reload && console.log(` ♻️  Live reloading the browser when files change`);
 // Open the page in the default browser
 // ----------------------------------
 
+process.setuid(501);
+
 const page = `${protocol}://localhost:${port}`;
 const open =
   process.platform == 'darwin'
@@ -184,7 +185,28 @@ browser && require('child_process').exec(open + ' ' + page);
 // Create an ngrok tunnel for localhost
 // ----------------------------------
 
+var spawn = require('child_process').spawn;
+const ngrokConfig = `
+authtoken: 1RJ1wVqDcoolLeIWrzTSRDJt4Wb_73v2muP83AeeNA14wSMY
+tunnels:
+  servor:
+    proto: http
+    addr: ${protocol}://localhost:${port}
+    bind_tls: ${protocol === 'https'}
+`;
+
+fs.writeFileSync('ngrok.yml', ngrokConfig);
+spawn('npx', ['ngrok', 'start', '-config', './ngrok.yml', 'servor'], {
+  stdio: 'inherit'
+});
+
+// Working
 // var spawn = require('child_process').spawn;
+// spawn('npx', ['ngrok', 'start', '-config', './ngrok.yml', 'servor'], {
+//   stdio: 'inherit'
+// });
+
+// http only
 // spawn('npx', ['ngrok', 'http', `${protocol}://localhost:${port}`], {
 //   stdio: 'inherit'
 // });

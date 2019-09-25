@@ -49,5 +49,5 @@ rm -rf tmp
 rm ../servorCA.pem
 
 # The username behind sudo, to give ownership back
-user=$( who am i | awk '{ print $1 }')
-chown -R "$user" ..
+# user=$( who am i | awk '{ print $1 }')
+# chown -R "$user" ..
