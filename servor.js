@@ -165,7 +165,20 @@ browser && proc.execSync(`${open} ${protocol}://localhost:${port}`);
 
 // Create an ngrok tunnel for localhost
 
-fs.writeFileSync('ngrok.yml', ngrok);
-proc.spawn('npx', ['ngrok', 'start', '-config', 'ngrok.yml', 'servor'], {
-  stdio: 'inherit'
+process.stdin.setRawMode(true);
+process.stdin.once('readable', () => {
+  const key = String(process.stdin.read());
+  process.stdin.setRawMode(false);
+  if (key === ' ') {
+    fs.writeFileSync('ngrok.yml', ngrok);
+    proc.spawn('npx', ['ngrok', 'start', '-config', 'ngrok.yml', 'servor'], {
+      stdio: 'inherit'
+    });
+  } else process.exit();
 });
+
+setTimeout(
+  console.log,
+  500,
+  `\n\n 🌍 Press spacebar to start an ngrok tunnel\n`
+);
