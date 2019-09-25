@@ -6,27 +6,16 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 const http2 = require('http2');
+const proc = require('child_process');
+const os = require('os');
 
-// ----------------------------------
-// Generate map of all known mimetypes
-// ----------------------------------
-
-const mime = Object.entries(require('./types.json')).reduce(
-  (all, [type, exts]) =>
-    Object.assign(all, ...exts.map(ext => ({ [ext]: type }))),
-  {}
-);
-
-// ----------------------------------
 // Parse arguments from the command line
-// ----------------------------------
 
 const args = process.argv.slice(2).filter(x => !~x.indexOf('--'));
 
 const root = args[0] || '.';
 const fallback = args[1] || 'index.html';
 const port = args[2] || 8080;
-const reloadPort = args[3] || 5000;
 
 const browser = !~process.argv.indexOf('--no-browser');
 const reload = !~process.argv.indexOf('--no-reload');
@@ -34,37 +23,57 @@ const reload = !~process.argv.indexOf('--no-reload');
 const cwd = process.cwd();
 const admin = process.getuid && process.getuid() === 0;
 
-let server;
-let protocol;
+// Define and assign constants
 
-try {
-  admin && require('child_process').execSync('cd certify && ./generate.sh');
-  const cert = fs.readFileSync('servor.crt');
-  const key = fs.readFileSync('servor.key');
-  protocol = 'https';
-  server = (cb, h2) =>
-    h2
-      ? http2.createSecureServer({ cert, key }, cb)
-      : https.createServer({ cert, key }, cb);
-} catch (e) {
-  protocol = 'http';
-  server = cb => http.createServer(cb);
-}
-
-// ----------------------------------
-// Template clientside reload script
-// ----------------------------------
-
-const reloadScript = `
+const clients = [];
+const reloader = `
   <script>
     const source = new EventSource('/livereload');
     source.onmessage = e => location.reload(true);
   </script>
 `;
 
-// ----------------------------------
+const mimes = Object.entries(require('./types.json')).reduce(
+  (all, [type, exts]) =>
+    Object.assign(all, ...exts.map(ext => ({ [ext]: type }))),
+  {}
+);
+
+const ips = Object.values(os.networkInterfaces())
+  .reduce((every, i) => [...every, ...i], [])
+  .filter(i => i.family === 'IPv4' && i.internal === false);
+
+const open =
+  process.platform == 'darwin'
+    ? 'open'
+    : process.platform == 'win32'
+    ? 'start'
+    : 'xdg-open';
+
+let server;
+let protocol;
+
+try {
+  admin && proc.execSync('cd certify && ./generate.sh');
+  const cert = fs.readFileSync('servor.crt');
+  const key = fs.readFileSync('servor.key');
+  process.setuid(501);
+  protocol = 'https';
+  server = cb => https.createServer({ cert, key }, cb);
+} catch (e) {
+  protocol = 'http';
+  server = cb => http.createServer(cb);
+}
+
+const ngrok = `authtoken: 1RJ1wVqDcoolLeIWrzTSRDJt4Wb_73v2muP83AeeNA14wSMY
+tunnels:
+  servor:
+    proto: http
+    addr: ${protocol}://localhost:${port}
+    bind_tls: ${protocol === 'https'}
+`;
+
 // Server utility functions
-// ----------------------------------
 
 const sendError = (res, resource, status) => {
   res.writeHead(status);
@@ -74,7 +83,7 @@ const sendError = (res, resource, status) => {
 
 const sendFile = (res, resource, status, file, ext) => {
   res.writeHead(status, {
-    'Content-Type': mime[ext] || 'application/octet-stream',
+    'Content-Type': mimes[ext] || 'application/octet-stream',
     'Access-Control-Allow-Origin': '*'
   });
   res.write(file, 'binary');
@@ -95,21 +104,13 @@ const isRouteRequest = uri =>
     ? true
     : false;
 
-// ----------------------------------
-// Start file watching server
-// ----------------------------------
+// Notify livereload clients on file change
 
-let fileWatchers = [];
-
-// Watch the target directory for changes and trigger reloads
 fs.watch(path.join(cwd, root), { recursive: true }, () => {
-  while (fileWatchers.length > 0)
-    sendMessage(fileWatchers.pop(), 'message', 'reloading');
+  while (clients.length > 0) sendMessage(clients.pop(), 'message', 'reloading');
 });
 
-// ----------------------------------
-// Start static file server
-// ----------------------------------
+// Start the server on the desired port
 
 server((req, res) => {
   const pathname = url.parse(req.url).pathname;
@@ -126,7 +127,7 @@ server((req, res) => {
     // Send a ping event every minute to prevent console errors
     setInterval(sendMessage, 60000, res, 'ping', 'waiting');
     // Register connection to be notified of file changes
-    fileWatchers.push(res);
+    clients.push(res);
   } else {
     const isRoute = isRouteRequest(pathname);
     const status = isRoute && pathname !== '/' ? 301 : 200;
@@ -140,73 +141,29 @@ server((req, res) => {
       // Respond with the contents of the file
       fs.readFile(uri, 'binary', (err, file) => {
         if (err) return sendError(res, resource, 500);
-        if (isRoute && reload) file += reloadScript;
+        if (isRoute && reload) file += reloader;
         sendFile(res, resource, status, file, ext);
       });
     });
   }
 }).listen(parseInt(port, 10));
 
-// ----------------------------------
-// Get available IP addresses
-// ----------------------------------
-const interfaces = require('os').networkInterfaces();
-const ips = Object.values(interfaces)
-  .reduce((every, i) => [...every, ...i], [])
-  .filter(i => i.family === 'IPv4' && i.internal === false)
-  .map(i => `${protocol}://${i.address}:${port}`);
-
-// ----------------------------------
 // Log startup details to terminal
-// ----------------------------------
 
 console.log(`\n 🗂  Serving ${root} on ${protocol}://localhost:${port}`);
-ips.length > 0 && console.log(` 📡 Exposed to the network on ${ips[0]}`);
+ips
+  .map(i => `${protocol}://${i.address}:${port}`)
+  .forEach(ip => console.log(` 📡 Exposed to the network on ${ip}`));
 console.log(` 🖥  Using ${fallback} for route requests`);
 reload && console.log(` ♻️  Live reloading the browser when files change`);
 
-// ----------------------------------
 // Open the page in the default browser
-// ----------------------------------
 
-process.setuid(501);
+browser && proc.execSync(`${open} ${protocol}://localhost:${port}`);
 
-const page = `${protocol}://localhost:${port}`;
-const open =
-  process.platform == 'darwin'
-    ? 'open'
-    : process.platform == 'win32'
-    ? 'start'
-    : 'xdg-open';
-
-browser && require('child_process').exec(open + ' ' + page);
-
-// ----------------------------------
 // Create an ngrok tunnel for localhost
-// ----------------------------------
 
-var spawn = require('child_process').spawn;
-const ngrokConfig = `
-authtoken: 1RJ1wVqDcoolLeIWrzTSRDJt4Wb_73v2muP83AeeNA14wSMY
-tunnels:
-  servor:
-    proto: http
-    addr: ${protocol}://localhost:${port}
-    bind_tls: ${protocol === 'https'}
-`;
-
-fs.writeFileSync('ngrok.yml', ngrokConfig);
-spawn('npx', ['ngrok', 'start', '-config', './ngrok.yml', 'servor'], {
+fs.writeFileSync('ngrok.yml', ngrok);
+proc.spawn('npx', ['ngrok', 'start', '-config', 'ngrok.yml', 'servor'], {
   stdio: 'inherit'
 });
-
-// Working
-// var spawn = require('child_process').spawn;
-// spawn('npx', ['ngrok', 'start', '-config', './ngrok.yml', 'servor'], {
-//   stdio: 'inherit'
-// });
-
-// http only
-// spawn('npx', ['ngrok', 'http', `${protocol}://localhost:${port}`], {
-//   stdio: 'inherit'
-// });
