@@ -176,22 +176,22 @@ const log = () => {
   console.log('\n'.repeat(process.stdout.rows));
   readline.cursorTo(process.stdout, 0, 0);
   readline.clearScreenDown(process.stdout);
-  console.log(`   ___                      
+  console.log(`\x1b[1m\x1b[36m   ___                      
   / __| ___ _ ___ _____ _ _ 
   \\__ \\/ -_) '_\\ V / _ \\ '_|
   |___/\\___|_|  \\_/\\___/_|
   
   \x1b[2m|––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––\x1b[0m
-  
-   🗂   Folder: ${cwd}/${root}
-   🖥   Router: /${fallback}
-   ♻️   Reload: ${reload}
 
    ${
      protocol === 'http'
        ? `🔓  Serving over http (for https run sudo !!)`
        : `🔐  Serving over https (with trusted certificates)`
    }
+  
+   🗂   Folder:\t ${cwd}/${root}
+   🖥   File:\t /${fallback}
+   ♻️   Reload:\t ${reload}
 
    🏡  Local:\t ${protocol}://localhost:${port}
    ${ips
