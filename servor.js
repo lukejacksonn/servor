@@ -8,6 +8,7 @@ const https = require('https');
 const http2 = require('http2');
 const proc = require('child_process');
 const os = require('os');
+const readline = require('readline');
 
 // Parse arguments from the command line
 
@@ -52,6 +53,7 @@ const open =
 
 let server;
 let protocol;
+let tunnel;
 
 try {
   admin && proc.execSync('cd certify && ./generate.sh');
@@ -78,7 +80,6 @@ tunnels:
 const sendError = (res, resource, status) => {
   res.writeHead(status);
   res.end();
-  console.log(' \x1b[41m', status, '\x1b[0m', `${resource}`);
 };
 
 const sendFile = (res, resource, status, file, ext) => {
@@ -88,7 +89,6 @@ const sendFile = (res, resource, status, file, ext) => {
   });
   res.write(file, 'binary');
   res.end();
-  console.log(' \x1b[42m', status, '\x1b[0m', `${resource}`);
 };
 
 const sendMessage = (res, channel, data) => {
@@ -96,18 +96,16 @@ const sendMessage = (res, channel, data) => {
   res.write('\n\n');
 };
 
-const isRouteRequest = uri =>
-  uri
+const isRouteRequest = pathname =>
+  !~pathname
     .split('/')
     .pop()
-    .indexOf('.') === -1
-    ? true
-    : false;
+    .indexOf('.');
 
 // Notify livereload clients on file change
 
 fs.watch(path.join(cwd, root), { recursive: true }, () => {
-  while (clients.length > 0) sendMessage(clients.pop(), 'message', 'reloading');
+  while (clients.length > 0) sendMessage(clients.pop(), 'message', 'reload');
 });
 
 // Start the server on the desired port
@@ -134,8 +132,7 @@ server((req, res) => {
     const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
     const uri = path.join(cwd, root, resource);
     const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
-    isRoute && console.log('\n \x1b[44m', 'RELOADING', '\x1b[0m\n');
-    // Check if files exists at the location
+    // Check if a file exists at the location
     fs.stat(uri, (err, stat) => {
       if (err) return sendError(res, resource, 404);
       // Respond with the contents of the file
@@ -148,37 +145,64 @@ server((req, res) => {
   }
 }).listen(parseInt(port, 10));
 
-// Log startup details to terminal
-
-console.log(`
- 🗂  Serving ${root} on ${protocol}://localhost:${port}
- ${ips
-   .map(ip => `📡 Exposed on ${protocol}://${ip.address}:${port}`)
-   .join('\n')}
- 🖥  Using ${fallback} to handle route requests
- ${reload && `♻️  Live reloading the browser when files change`}
-`);
-
 // Open the page in the default browser
 
 browser && proc.execSync(`${open} ${protocol}://localhost:${port}`);
 
-// Create an ngrok tunnel for localhost
+// Create an ngrok tunnel on enter press
 
-process.stdin.setRawMode(true);
-process.stdin.once('readable', () => {
-  const key = String(process.stdin.read());
-  process.stdin.setRawMode(false);
-  if (key === ' ') {
-    fs.writeFileSync('ngrok.yml', ngrok);
-    proc.spawn('npx', ['ngrok', 'start', '-config', 'ngrok.yml', 'servor'], {
-      stdio: 'inherit'
-    });
-  } else process.exit();
+process.stdin.once('data', () => {
+  process.stdout.write(`   🚧  Establishing ngrok tunnel..`);
+  fs.writeFileSync('ngrok.yml', ngrok);
+  const cmd = ['-q', 'ngrok', 'start', '-config', 'ngrok.yml', 'servor'];
+  proc.spawn('npx', cmd);
+  setInterval(function() {
+    try {
+      const data = proc.execSync('curl -s http://localhost:4040/api/tunnels');
+      const url = JSON.parse(String(data)).tunnels[0].public_url;
+      browser && proc.execSync(`${open} ${url}`);
+      clearInterval(this);
+      tunnel = url;
+      log();
+    } catch (e) {
+      process.stdout.write('.');
+    }
+  }, 1000);
 });
 
-setTimeout(
-  console.log,
-  500,
-  `\n\n 🌍 Press spacebar to start an ngrok tunnel\n`
-);
+// Log state to the terminal
+
+const log = () => {
+  console.log('\n'.repeat(process.stdout.rows));
+  readline.cursorTo(process.stdout, 0, 0);
+  readline.clearScreenDown(process.stdout);
+  console.log(`   ___                      
+  / __| ___ _ ___ _____ _ _ 
+  \\__ \\/ -_) '_\\ V / _ \\ '_|
+  |___/\\___|_|  \\_/\\___/_|
+  
+  \x1b[2m|––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––\x1b[0m
+  
+   🗂   Folder: ${cwd}/${root}
+   🖥   Router: /${fallback}
+   ♻️   Reload: ${reload}
+
+   ${
+     protocol === 'http'
+       ? `🔓  Serving over http (for https run sudo !!)`
+       : `🔐  Serving over https (with trusted certificates)`
+   }
+
+   🏡  Local:\t ${protocol}://localhost:${port}
+   ${ips
+     .map(ip => `📡  Network:\t ${protocol}://${ip.address}:${port}`)
+     .join('\n')}
+
+   ${
+     tunnel
+       ? `🌍  Public:\t \x1b[4m${tunnel}\x1b[0m`
+       : `🚇  Hit \x1b[4mreturn\x1b[0m to generate a public url`
+   }`);
+};
+
+log();
