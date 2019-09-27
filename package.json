@@ -5,7 +5,7 @@
   "repository": "lukejacksonn/servor",
   "main": "./servor.js",
   "bin": {
-    "servor": "./servor.js"
+    "servor": "./cli.js"
   },
   "keywords": [
     "development",
@@ -15,7 +15,7 @@
     "reload"
   ],
   "scripts": {
-    "test": "node servor test index.html 8080",
+    "test": "node cli test index.html 8080",
     "start": "node servor"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
