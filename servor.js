@@ -8,7 +8,7 @@ const proc = require('child_process');
 const os = require('os');
 const readline = require('readline');
 
-const ssl = ips => `
+const ssl = `
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
 keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
@@ -77,6 +77,7 @@ module.exports = ({
   const cwd = process.cwd();
   const admin = process.getuid && process.getuid() === 0;
   const clients = [];
+  let requests = 0;
 
   let server;
   let protocol;
@@ -84,7 +85,7 @@ module.exports = ({
 
   try {
     if (admin) {
-      fs.writeFileSync('ssl.conf', ssl(ips));
+      fs.writeFileSync('ssl.conf', ssl);
       fs.writeFileSync('ca.conf', ca);
       proc.execSync('./certify.sh');
       process.setuid(501);
@@ -125,17 +126,11 @@ module.exports = ({
       .pop()
       .indexOf('.');
 
-  // Notify livereload clients on file change
-
-  fs.watch(path.join(cwd, root), { recursive: true }, () => {
-    while (clients.length > 0) sendMessage(clients.pop(), 'message', 'reload');
-  });
-
   // Start the server on the desired port
 
   server((req, res) => {
     const pathname = url.parse(req.url).pathname;
-    if (pathname === '/livereload') {
+    if (reload && pathname === '/livereload') {
       res.writeHead(200, {
         Connection: 'keep-alive',
         'Content-Type': 'text/event-stream',
@@ -144,8 +139,9 @@ module.exports = ({
       });
       sendMessage(res, 'connected', 'ready');
       setInterval(sendMessage, 60000, res, 'ping', 'waiting');
-      clients.push(res);
+      log(clients.push(res));
     } else {
+      log(requests++);
       const isRoute = isRouteRequest(pathname);
       const status = isRoute && pathname !== '/' ? 301 : 200;
       const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
@@ -162,43 +158,49 @@ module.exports = ({
     }
   }).listen(parseInt(port, 10));
 
+  // Notify livereload clients on file change
+
+  reload &&
+    fs.watch(path.join(cwd, root), { recursive: true }, () => {
+      while (clients.length > 0)
+        sendMessage(clients.pop(), 'message', 'reload');
+      log();
+    });
+
   // Open the page in the default browse
 
   browse && proc.execSync(`${open} ${protocol}://localhost:${port}`);
 
   // Log state to the terminal
 
+  console.log('\n'.repeat(process.stdout.rows));
   const log = () => {
     if (silent) return;
-    console.log('\n'.repeat(process.stdout.rows));
     readline.cursorTo(process.stdout, 0, 0);
     readline.clearScreenDown(process.stdout);
-    console.log(`\x1b[1m\x1b[36m   ___                      
-  / __| ___ _ ___ _____ _ _ 
-  \\__ \\/ -_) '_\\ V / _ \\ '_|
-  |___/\\___|_|  \\_/\\___/_|\x1b[0m
+    console.log(`
+  🗂  Folder:\t${cwd}/${root}
+  🖥  Route:\t${root}/${fallback}
 
-    
-   ${
-     protocol === 'http'
-       ? `🔓  Serving over http (for https run sudo !!)`
-       : `🔐  Serving over https (with trusted certificates)`
-   }
-  
-   🗂   Folder:\t ${cwd}/${root}
-   🖥   File:\t /${fallback}
-   ♻️   Reload:\t ${reload}
+  ⚙️  Requests:\t${requests} files (${clients.length} livereload subscription${
+      clients.length === 1 ? '' : 's'
+    })
 
-   🏡  Local:\t ${protocol}://localhost:${port}
-   ${ips
-     .map(ip => `📡  Network:\t ${protocol}://${ip.address}:${port}`)
-     .join('\n   ')}
-
-   ${
-     tunnel
-       ? `🌍  Public:\t \x1b[4m${tunnel}\x1b[0m`
-       : `🚇  Hit \x1b[4mreturn\x1b[0m to generate a public url`
-   }`);
+  🏡 Local:\t${protocol}://localhost:${port}
+  ${ips
+    .map(ip => `📡 Network:\t${protocol}://${ip.address}:${port}`)
+    .join('\n   ')} 
+  ${
+    typeof tunnel === 'number'
+      ? `🌍 Public:\tEstablishing ngrok tunnel.` +
+        Array.from({ length: tunnel })
+          .map(_ => '.')
+          .join('')
+      : tunnel
+      ? `🌍 Public:\t\x1b[4m${tunnel}\x1b[0m`
+      : `🌍 Public:\tHit \x1b[4mreturn\x1b[0m to generate a public url`
+  }
+`);
   };
 
   log();
@@ -206,8 +208,8 @@ module.exports = ({
   // Return function to create public url
 
   return () =>
-    new Promise((resolve, reject) => {
-      !silent && process.stdout.write(`   🚧  Establishing ngrok tunnel..`);
+    new Promise(resolve => {
+      log((tunnel = 0));
       fs.writeFileSync('ngrok.yml', ngrok(protocol, port));
       const cmd = ['-q', 'ngrok', 'start', '-config', 'ngrok.yml', 'servor'];
       proc.spawn('npx', cmd);
@@ -220,7 +222,7 @@ module.exports = ({
           log();
           resolve(url);
         } catch (e) {
-          !silent && process.stdout.write('.');
+          log(tunnel++);
         }
       }, 1000);
     });
