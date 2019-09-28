@@ -85,13 +85,13 @@ module.exports = ({
 
   try {
     if (admin) {
-      fs.writeFileSync('ssl.conf', ssl);
-      fs.writeFileSync('ca.conf', ca);
-      proc.execSync('./certify.sh');
+      fs.writeFileSync(__dirname + '/ssl.conf', ssl);
+      fs.writeFileSync(__dirname + '/ca.conf', ca);
+      proc.execSync(__dirname + '/certify.sh', { cwd: __dirname });
       process.setuid(501);
     }
-    const cert = fs.readFileSync('servor.crt');
-    const key = fs.readFileSync('servor.key');
+    const cert = fs.readFileSync(__dirname + '/servor.crt');
+    const key = fs.readFileSync(__dirname + '/servor.key');
     protocol = 'https';
     server = cb => https.createServer({ cert, key }, cb);
   } catch (e) {
@@ -210,17 +210,16 @@ module.exports = ({
   return () =>
     new Promise(resolve => {
       log((tunnel = 0));
-      fs.writeFileSync('ngrok.yml', ngrok(protocol, port));
-      const cmd = ['-q', 'ngrok', 'start', '-config', 'ngrok.yml', 'servor'];
-      proc.spawn('npx', cmd);
+      const config = __dirname + '/ngrok.yml';
+      fs.writeFileSync(config, ngrok(protocol, port));
+      proc.spawn('npx', ['-q', 'ngrok', 'start', '-config', config, 'servor']);
       setInterval(function() {
         try {
           const data = proc.execSync('curl -s localhost:4040/api/tunnels');
           const url = (tunnel = JSON.parse(String(data)).tunnels[0].public_url);
           browse && proc.execSync(`${open} ${url}`);
           clearInterval(this);
-          log();
-          resolve(url);
+          log(resolve(url));
         } catch (e) {
           log(tunnel++);
         }
