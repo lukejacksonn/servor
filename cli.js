@@ -9,7 +9,7 @@ const tunnel = servor({
   root: args[0],
   fallback: args[1],
   port: args[2],
-  browser: !~process.argv.indexOf('--no-browser'),
+  browse: !~process.argv.indexOf('--no-browse'),
   reload: !~process.argv.indexOf('--no-reload'),
   silent: !!~process.argv.indexOf('--no-output')
 });

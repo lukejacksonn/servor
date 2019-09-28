@@ -18,7 +18,7 @@ module.exports = ({
   root = '.',
   fallback = 'index.html',
   port = 8080,
-  browser = true,
+  browse = true,
   reload = true,
   silent = true,
   inject = ''
@@ -142,9 +142,9 @@ tunnels:
     }
   }).listen(parseInt(port, 10));
 
-  // Open the page in the default browser
+  // Open the page in the default browse
 
-  browser && proc.execSync(`${open} ${protocol}://localhost:${port}`);
+  browse && proc.execSync(`${open} ${protocol}://localhost:${port}`);
 
   // Log state to the terminal
 
@@ -195,7 +195,7 @@ tunnels:
         try {
           const data = proc.execSync('curl -s localhost:4040/api/tunnels');
           const url = (tunnel = JSON.parse(String(data)).tunnels[0].public_url);
-          browser && proc.execSync(`${open} ${url}`);
+          browse && proc.execSync(`${open} ${url}`);
           clearInterval(this);
           log();
           resolve(url);
