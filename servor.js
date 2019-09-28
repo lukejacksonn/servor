@@ -8,11 +8,62 @@ const proc = require('child_process');
 const os = require('os');
 const readline = require('readline');
 
+const ssl = ips => `
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = localhost
+DNS.2 = 127.0.0.1
+DNS.3 = ::1
+`;
+
+const ca = `
+[req]
+prompt = no
+distinguished_name = options
+[options]
+C = US
+ST = State
+L = Locality
+O = Company
+CN = servor
+`;
+
 const mimes = Object.entries(require('./types.json')).reduce(
   (all, [type, exts]) =>
     Object.assign(all, ...exts.map(ext => ({ [ext]: type }))),
   {}
 );
+
+const ips = Object.values(os.networkInterfaces())
+  .reduce((every, i) => [...every, ...i], [])
+  .filter(i => i.family === 'IPv4' && i.internal === false);
+
+const open =
+  process.platform == 'darwin'
+    ? 'open'
+    : process.platform == 'win32'
+    ? 'start'
+    : 'xdg-open';
+
+const reloader = script => `
+  <script>
+    const source = new EventSource('/livereload');
+    source.onmessage = e => location.reload(true);
+    ${script}
+  </script>
+`;
+
+const ngrok = (protocol, port) => `
+authtoken: 1RJ1wVqDcoolLeIWrzTSRDJt4Wb_73v2muP83AeeNA14wSMY
+tunnels:
+  servor:
+    proto: http
+    addr: ${protocol}://localhost:${port}
+    bind_tls: ${protocol === 'https'}
+`;
 
 module.exports = ({
   root = '.',
@@ -23,54 +74,29 @@ module.exports = ({
   silent = true,
   inject = ''
 } = {}) => {
-  // Define and assign constants
-
   const cwd = process.cwd();
   const admin = process.getuid && process.getuid() === 0;
-
   const clients = [];
-  const reloader = `
-  <script>
-    const source = new EventSource('/livereload');
-    source.onmessage = e => location.reload(true);
-    ${inject}
-  </script>
-`;
-
-  const ips = Object.values(os.networkInterfaces())
-    .reduce((every, i) => [...every, ...i], [])
-    .filter(i => i.family === 'IPv4' && i.internal === false);
-
-  const open =
-    process.platform == 'darwin'
-      ? 'open'
-      : process.platform == 'win32'
-      ? 'start'
-      : 'xdg-open';
 
   let server;
   let protocol;
   let tunnel;
 
   try {
-    admin && proc.execSync('cd certify && ./generate.sh');
+    if (admin) {
+      fs.writeFileSync('ssl.conf', ssl(ips));
+      fs.writeFileSync('ca.conf', ca);
+      proc.execSync('./certify.sh');
+      process.setuid(501);
+    }
     const cert = fs.readFileSync('servor.crt');
     const key = fs.readFileSync('servor.key');
-    process.setuid(501);
     protocol = 'https';
     server = cb => https.createServer({ cert, key }, cb);
   } catch (e) {
     protocol = 'http';
     server = cb => http.createServer(cb);
   }
-
-  const ngrok = `authtoken: 1RJ1wVqDcoolLeIWrzTSRDJt4Wb_73v2muP83AeeNA14wSMY
-tunnels:
-  servor:
-    proto: http
-    addr: ${protocol}://localhost:${port}
-    bind_tls: ${protocol === 'https'}
-`;
 
   // Server utility functions
 
@@ -110,18 +136,14 @@ tunnels:
   server((req, res) => {
     const pathname = url.parse(req.url).pathname;
     if (pathname === '/livereload') {
-      // Open the event stream for live reload
       res.writeHead(200, {
         Connection: 'keep-alive',
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Access-Control-Allow-Origin': '*'
       });
-      // Send an initial ack event to stop any netwo pending
       sendMessage(res, 'connected', 'ready');
-      // Send a ping event every minute to prevent console errors
       setInterval(sendMessage, 60000, res, 'ping', 'waiting');
-      // Register connection to be notified of file changes
       clients.push(res);
     } else {
       const isRoute = isRouteRequest(pathname);
@@ -129,13 +151,11 @@ tunnels:
       const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
       const uri = path.join(cwd, root, resource);
       const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
-      // Check if a file exists at the location
       fs.stat(uri, (err, stat) => {
         if (err) return sendError(res, resource, 404);
-        // Respond with the contents of the file
         fs.readFile(uri, 'binary', (err, file) => {
           if (err) return sendError(res, resource, 500);
-          if (isRoute && reload) file += reloader;
+          if (isRoute && reload) file += reloader(inject);
           sendFile(res, resource, status, file, ext);
         });
       });
@@ -188,7 +208,7 @@ tunnels:
   return () =>
     new Promise((resolve, reject) => {
       !silent && process.stdout.write(`   🚧  Establishing ngrok tunnel..`);
-      fs.writeFileSync('ngrok.yml', ngrok);
+      fs.writeFileSync('ngrok.yml', ngrok(protocol, port));
       const cmd = ['-q', 'ngrok', 'start', '-config', 'ngrok.yml', 'servor'];
       proc.spawn('npx', cmd);
       setInterval(function() {
