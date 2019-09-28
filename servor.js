@@ -8,6 +8,9 @@ const proc = require('child_process');
 const os = require('os');
 const readline = require('readline');
 
+const cwd = process.cwd();
+const admin = process.getuid && process.getuid() === 0;
+
 const ssl = `
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
@@ -74,11 +77,8 @@ module.exports = ({
   silent = true,
   inject = ''
 } = {}) => {
-  const cwd = process.cwd();
-  const admin = process.getuid && process.getuid() === 0;
   const clients = [];
   let requests = 0;
-
   let server;
   let protocol;
   let tunnel;
@@ -182,23 +182,23 @@ module.exports = ({
   🗂  Folder:\t${cwd}/${root}
   🖥  Route:\t${root}/${fallback}
 
-  ⚙️  Requests:\t${requests} files (${clients.length} livereload subscription${
+  ⚙️  Requests:\t${requests} files (${clients.length} livereload listener${
       clients.length === 1 ? '' : 's'
     })
 
-  🏡 Local:\t${protocol}://localhost:${port}
+  🏡  Local:\t${protocol}://localhost:${port}
   ${ips
-    .map(ip => `📡 Network:\t${protocol}://${ip.address}:${port}`)
+    .map(ip => `📡  Network:\t${protocol}://${ip.address}:${port}`)
     .join('\n   ')} 
   ${
     typeof tunnel === 'number'
-      ? `🌍 Public:\tEstablishing ngrok tunnel.` +
+      ? `🌍  Public:\tEstablishing ngrok tunnel.` +
         Array.from({ length: tunnel })
           .map(_ => '.')
           .join('')
       : tunnel
-      ? `🌍 Public:\t\x1b[4m${tunnel}\x1b[0m`
-      : `🌍 Public:\tHit \x1b[4mreturn\x1b[0m to generate a public url`
+      ? `🌍  Public:\t\x1b[4m${tunnel}\x1b[0m`
+      : `🌍  Public:\tHit \x1b[4mreturn\x1b[0m to generate a public url`
   }
 `);
   };
@@ -217,8 +217,8 @@ module.exports = ({
         try {
           const data = proc.execSync('curl -s localhost:4040/api/tunnels');
           const url = (tunnel = JSON.parse(String(data)).tunnels[0].public_url);
-          browse && proc.execSync(`${open} ${url}`);
           clearInterval(this);
+          browse && proc.execSync(`${open} ${url}`);
           log(resolve(url));
         } catch (e) {
           log(tunnel++);
