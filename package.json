@@ -1,6 +1,6 @@
 {
   "name": "servor",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "A dependency free dev server for single page app development",
   "repository": "lukejacksonn/servor",
   "main": "./servor.js",
@@ -15,7 +15,7 @@
     "reload"
   ],
   "scripts": {
-    "test": "node cli test index.html 8080",
+    "test": "node cli test",
     "start": "node servor"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
