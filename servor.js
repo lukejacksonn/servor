@@ -3,7 +3,6 @@ const url = require('url');
 const path = require('path');
 const http = require('http');
 const https = require('https');
-const http2 = require('http2');
 const proc = require('child_process');
 const os = require('os');
 const readline = require('readline');
