@@ -7,6 +7,7 @@ const http2 = require('http2');
 const proc = require('child_process');
 const os = require('os');
 const readline = require('readline');
+const net = require('net');
 
 const cwd = process.cwd();
 const admin = process.getuid && process.getuid() === 0;
@@ -68,15 +69,25 @@ tunnels:
     bind_tls: ${protocol === 'https'}
 `;
 
-module.exports = ({
+const fport = () =>
+  new Promise(res => {
+    const s = net.createServer().listen(0, () => {
+      const { port } = s.address();
+      s.close(() => res(port));
+    });
+  });
+
+module.exports = async ({
   root = '.',
   fallback = 'index.html',
-  port = 8080,
+  port,
   browse = true,
   reload = true,
   silent = true,
   inject = ''
 } = {}) => {
+  port = port || (await fport());
+
   const clients = [];
   let requests = 0;
   let server;
@@ -186,19 +197,19 @@ module.exports = ({
       clients.length === 1 ? '' : 's'
     })
 
-  🏡  Local:\t${protocol}://localhost:${port}
+  🏡 Local:\t${protocol}://localhost:${port}
   ${ips
-    .map(ip => `📡  Network:\t${protocol}://${ip.address}:${port}`)
-    .join('\n   ')} 
+    .map(ip => `📡 Network:\t${protocol}://${ip.address}:${port}`)
+    .join('\n  ')} 
   ${
     typeof tunnel === 'number'
-      ? `🌍  Public:\tEstablishing ngrok tunnel.` +
+      ? `🌍 Public:\tEstablishing ngrok tunnel.` +
         Array.from({ length: tunnel })
           .map(_ => '.')
           .join('')
       : tunnel
-      ? `🌍  Public:\t\x1b[4m${tunnel}\x1b[0m`
-      : `🌍  Public:\tHit \x1b[4mreturn\x1b[0m to generate a public url`
+      ? `🌍 Public:\t\x1b[4m${tunnel}\x1b[0m`
+      : `🌍 Public:\tHit \x1b[4mreturn\x1b[0m to generate a public url`
   }
 `);
   };
