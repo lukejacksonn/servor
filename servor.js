@@ -86,7 +86,7 @@ module.exports = async ({
   inject = ''
 } = {}) => {
   port = port || (await fport());
-
+  root = root.startsWith('/') ? root : path.join(cwd, root);
   const clients = [];
   let requests = 0;
   let server;
@@ -155,7 +155,7 @@ module.exports = async ({
       const isRoute = isRouteRequest(pathname);
       const status = isRoute && pathname !== '/' ? 301 : 200;
       const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
-      const uri = path.join(cwd, root, resource);
+      const uri = path.join(root, resource);
       const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
       fs.stat(uri, (err, stat) => {
         if (err) return sendError(res, resource, 404);
@@ -171,7 +171,7 @@ module.exports = async ({
   // Notify livereload clients on file change
 
   reload &&
-    fs.watch(path.join(cwd, root), { recursive: true }, () => {
+    fs.watch(root, { recursive: true }, () => {
       while (clients.length > 0)
         sendMessage(clients.pop(), 'message', 'reload');
       log();
@@ -189,7 +189,7 @@ module.exports = async ({
     readline.cursorTo(process.stdout, 0, 0);
     readline.clearScreenDown(process.stdout);
     console.log(`
-  🗂  Folder:\t${cwd}/${root}
+  🗂  Folder:\t${root}
   🖥  Route:\t${root}/${fallback}
 
   ⚙️  Requests:\t${requests} files (${clients.length} livereload listener${
