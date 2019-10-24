@@ -1,9 +1,9 @@
-#!/usr/bin/env node
-
 const fs = require("fs");
 const url = require("url");
 const path = require("path");
 const http = require("http");
+
+module.exports = function(root, fallback, port, reloadPort, cwd){
 
 // ----------------------------------
 // Generate map of all known mimetypes
@@ -14,16 +14,6 @@ const mime = Object.entries(require("./types.json")).reduce(
     Object.assign(all, ...exts.map(ext => ({ [ext]: type }))),
   {}
 );
-
-// ----------------------------------
-// Parse arguments from the command line
-// ----------------------------------
-
-const root = process.argv[2] || ".";
-const fallback = process.argv[3] || "index.html";
-const port = process.argv[4] || 8080;
-const reloadPort = process.argv[5] || 5000;
-const cwd = process.cwd();
 
 // ----------------------------------
 // Template clientside reload script
@@ -140,3 +130,4 @@ const open =
       : "xdg-open";
 
 require("child_process").exec(open + " " + page);
+}
