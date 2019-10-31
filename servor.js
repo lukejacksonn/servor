@@ -183,7 +183,7 @@ module.exports = async ({
 
   // Log state to the terminal
 
-  console.log('\n'.repeat(process.stdout.rows));
+  !silent && console.log('\n'.repeat(process.stdout.rows));
   const log = () => {
     if (silent) return;
     readline.cursorTo(process.stdout, 0, 0);
