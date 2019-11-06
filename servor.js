@@ -9,40 +9,16 @@ const readline = require('readline');
 const net = require('net');
 
 const cwd = process.cwd();
-const admin = process.getuid && process.getuid() === 0;
 
-const ssl = `
-authorityKeyIdentifier=keyid,issuer
-basicConstraints=CA:FALSE
-keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
-subjectAltName = @alt_names
-[alt_names]
-DNS.1 = localhost
-DNS.2 = 127.0.0.1
-DNS.3 = ::1
-`;
-
-const ca = `
-[req]
-prompt = no
-distinguished_name = options
-[options]
-C = US
-ST = State
-L = Locality
-O = Company
-CN = servor
-`;
+const ips = Object.values(os.networkInterfaces())
+  .reduce((every, i) => [...every, ...i], [])
+  .filter(i => i.family === 'IPv4' && i.internal === false);
 
 const mimes = Object.entries(require('./types.json')).reduce(
   (all, [type, exts]) =>
     Object.assign(all, ...exts.map(ext => ({ [ext]: type }))),
   {}
 );
-
-const ips = Object.values(os.networkInterfaces())
-  .reduce((every, i) => [...every, ...i], [])
-  .filter(i => i.family === 'IPv4' && i.internal === false);
 
 const open =
   process.platform == 'darwin'
@@ -83,29 +59,27 @@ module.exports = async ({
   browse = true,
   reload = true,
   silent = true,
+  secure = false,
   inject = ''
 } = {}) => {
   port = port || (await fport());
   root = root.startsWith('/') ? root : path.join(cwd, root);
   const clients = [];
   let requests = 0;
+  let protocol = secure ? 'https' : 'http';
   let server;
-  let protocol;
   let tunnel;
 
-  try {
-    if (admin) {
-      fs.writeFileSync(__dirname + '/ssl.conf', ssl);
-      fs.writeFileSync(__dirname + '/ca.conf', ca);
-      proc.execSync(__dirname + '/certify.sh', { cwd: __dirname });
-      process.setuid(501);
+  if (secure) {
+    try {
+      const cert = fs.readFileSync(__dirname + '/servor.crt');
+      const key = fs.readFileSync(__dirname + '/servor.key');
+      server = cb => https.createServer({ cert, key }, cb);
+    } catch (e) {
+      console.log('Please run `servor --certify` to generate ssl credentials!');
+      process.exit();
     }
-    const cert = fs.readFileSync(__dirname + '/servor.crt');
-    const key = fs.readFileSync(__dirname + '/servor.key');
-    protocol = 'https';
-    server = cb => https.createServer({ cert, key }, cb);
-  } catch (e) {
-    protocol = 'http';
+  } else {
     server = cb => http.createServer(cb);
   }
 

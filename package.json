@@ -15,8 +15,12 @@
     "reload"
   ],
   "scripts": {
+    "cleanup": "rm -f servor.key servor.crt",
+    "certify": "yarn cleanup && node cli --certify",
     "test": "node cli test",
-    "start": "node servor"
+    "test:secure": "node cli test --secure",
+    "certify:test:secure": "yarn certify && yarn test:secure",
+    "sudo:certify:test:secure": "sudo yarn certify && yarn test:secure"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
   "license": "MIT"
