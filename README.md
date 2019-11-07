@@ -1,114 +1,123 @@
 # Servør
 
-> A dependency free dev server for web app development
+> A dependency free dev server for modern web application development
 
-The new and enhanced version of [http-server-spa](https://npmjs.com/http-server-spa). A very compact, https capable static file server with useful features and sensible defaults to support modern web app development on localhost and over a network. It can be used via the command line or programatically using the node API.
+The new and enhanced version of [http-server-spa](https://npmjs.com/http-server-spa). A very compact but capable static file server with https, live reloading and other useful features to support web app development on localhost and over a network.
 
-The motivation here was to write a "close to the metal" package from the ground up; employing only native nodejs and browser APIs to do focussed tasks with minimal code (~200LOC).
+Servør can be invoked via the command line or programmatically using the node API.
+
+The motivation here was to write a "close to the metal" package from the ground up using no dependencies; only native nodejs and browser APIs to do (what should be) a straightforward task with minimal code.
 
 <hr>
 
-<img src="https://user-images.githubusercontent.com/1457604/48194482-bf061a00-e37f-11e8-98d3-90d97e639c4e.gif" width="800">
+<img src="https://user-images.githubusercontent.com/1457604/68399629-979e8480-016e-11ea-89b3-0f852a018042.gif" alt="servor" width="800">
 
 ## Features
 
-- 🗂 Serves static content like scripts, styles, images from a directory
-- 🖥 Reroutes all path requests like `/` or `/admin` to a single file
+- 🗂 Serves static content like scripts, styles, images from a given directory
+- 🖥 Redirects all path requests to a single file for frontend routing
 - ♻️ Reloads the browser when project files get added, removed or modified
 - 🔐 Supports https with self signed and trusted certificates
-- 🚇 Generates secure public urls for localhost with ngrok
+- 🚇 Generates secure public urls for localhost using ngrok
 
 ## CLI Usage
 
 Run as a terminal command without adding it as a dependency using `npx`:
 
-```
+```s
 npx servor <root> <fallback> <port>
 ```
 
 - `<root>` path to serve static files from (defaults to current directory `.`)
 - `<fallback>` the file served for all non-file requests (defaults to `index.html`)
-- `<port>` what port you want to serve the files from (defaults to `8080`)
+- `<port>` what port you want to serve the files from (defaults to any free port)
 
 Optional flags passed as non-positional arguments:
 
-- `--no-browse` prevents the browser from opening when the server starts
-- `--no-reload` prevents the browser from reloading when files change
-- `--no-output` prevents the node process from logging to stdout
+- `--browse` causes the browser to open when the server starts
+- `--reload` causes the browser to reload when files change
+- `--secure` causes the server to generate credentials and use https
+- `--silent` prevents the node process from logging to stdout
 
 Example usage with npm scripts in a `package.json` file after running `npm i servor -D`:
 
 ```json
 {
   "devDependencies": {
-    "servor": "2.0.0"
+    "servor": "3.0.0"
   },
   "scripts": {
-    "start": "servor www index.html 8080"
+    "start": "servor www index.html 8080 --reload --browse"
   }
 }
 ```
 
-#### Creating a public url
+### Creating a public url
 
-Once the process has started hit the return key; ngrok will be ran via `npx` and the public url will be logged out.
-
-## API Usage
-
-Use servor programatically with node by requiring it as a module in your script:
-
-```js
-const servor = require('servor');
-const ngrok = servor({
-  root: '.',
-  fallback: 'index.html',
-  port: 8080,
-  browse: true,
-  reload: true,
-  silent: true,
-  inject: ''
-});
-
-const url = await ngrok(); // https://xxxxxxxx.ngrok.io
-```
-
-The `servor` function accepts an config object with optional props assigned the above default values if none are provided. Calling the `servor` function starts up a server and returns a function `ngrok` which can be used to generate a public url for the server.
-
-#### Creating a public url
-
-Call the `ngrok` function; it returns a promise that resolves to the public url.
-
-## Enable SSL (MacOS)
-
-Servers always attempt to start in `https` mode but this is only possible if the appropriate credentials (certificate and key) exist in the module directory. If the credentials do not exist, then the servers will fallback to the `http` protocol.
+Once the process has started, hit the return key in the terminal window; this will cause [`tunnel.js`](/tunnel.js) to be ran which invokes ngrok via `npx`. A public url will be logged out as soon as a connection has been established.
 
 ### Generating Credentials
 
-To generate the `servor.crt` and `servor.key` files and upgrade to `https` run:
+> NOTE: This process depends on the `openssl` command existing (tested on macOS only)
 
-```
-sudo servor
-```
-
-> **WARNING:** Running any npm module with root privilages is not recommened. Please inspect the code first.
-
-If you have servor installed globally or as a dependency then **this only needs to be done once** as credentials are stored locally and reused. If running via `npx` then it will require `sudo` everytime to enable `https`.
-
-When servor is ran with root privilages a bash script is invoked which:
+When servor is invoked with the `--secure` flag, it looks for two files `servor.crt` and `servor.key`. If the files are missing then [`certify.sh`](/certify.sh) is ran which:
 
 - Creates a local certificate authority used to generate self signed SSL certificates
 - Runs the appropriate `openssl` commands to generate:
-  - a root certificate (pem) so your system will trust your self signed certificate
-  - a public certificate (crt) that your server sends to clients
-  - a private key for the certificate (key) to encrypt and decrypt client/server traffic
-- Adds the root certificate to keychain so the browser trusts all self signed certificates
+  - a root certificate (pem) so the system will trust the self signed certificate
+  - a public certificate (crt) that the server sends to clients
+  - a private key for the certificate (key) to encrypt and decrypt traffic
 
-It is only the final step that requires `sudo`. This step:
+If these steps are all successful then the server will start using https. The credentials are valid but are still not trusted, which means that when the server is opened in the browser for the first time there is likely to be a warning displayed which needs to be acknowledged before continuing. Once the warning has been dismissed once it should not return unless the credentials are regenerated.
 
+#### Adding credentials to the trusted store
+
+> NOTE: This process depends on the `sudo` and `security` commands existing (tested on macOS only)
+
+For the browser to trust self signed certificates the root certificate must be added to the system trusted store. This can be done automatically by running `sudo servor --secure` which:
+
+- Adds the root certificate to the system Keychain Access
 - Prevents the "⚠️ Your connection is not private" warning
 - Makes the 🔒 icon appear in the browsers address bar
 
-The approach was adopted from https://github.com/kingkool68/generate-ssl-certs-for-local-development
+The approach was adopted from [@kingkool68/generate-ssl-certs-for-local-development](https://github.com/kingkool68/generate-ssl-certs-for-local-development)
+
+## API Usage
+
+Use servor programmatically with node by requiring it as a module in your script:
+
+```js
+const servor = require('servor');
+const instance = servor({
+  root: '.',
+  fallback: 'index.html',
+  port: 8080,
+  reload: false,
+  inject: ''
+  credentials: {},
+});
+```
+
+The `servor` function accepts a config object with optional props assigned the above default values if none are provided. Calling the `servor` function starts up a new server and returns an object describing its configuration.
+
+```js
+const { url, root, protocol, port, ips }; = servor(config);
+```
+
+### Inject
+
+The `inject` property accepts a string that gets prepended to the servers root document (which is `index.html` by default). This could be used to inject config or extend the development servers behavior and capabilities to suit specific environments.
+
+```js
+const config = require('package.json');
+servor({ inject: `<script>window.pkg=${config}</script>` });
+```
+
+### Credentials
+
+The `credentials` property accepts an object containing the entries `cert` and `key` which must both be valid for the server to start successfully. If valid credentials are provided then the server will start serving over https.
+
+It is possible to generate the appropriate credentials using the `--secure` CLI flag.
 
 ## Notes
 

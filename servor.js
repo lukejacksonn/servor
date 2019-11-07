@@ -3,46 +3,9 @@ const url = require('url');
 const path = require('path');
 const http = require('http');
 const https = require('https');
-const proc = require('child_process');
 const os = require('os');
-const readline = require('readline');
 const net = require('net');
-
 const cwd = process.cwd();
-
-const ips = Object.values(os.networkInterfaces())
-  .reduce((every, i) => [...every, ...i], [])
-  .filter(i => i.family === 'IPv4' && i.internal === false);
-
-const mimes = Object.entries(require('./types.json')).reduce(
-  (all, [type, exts]) =>
-    Object.assign(all, ...exts.map(ext => ({ [ext]: type }))),
-  {}
-);
-
-const open =
-  process.platform == 'darwin'
-    ? 'open'
-    : process.platform == 'win32'
-    ? 'start'
-    : 'xdg-open';
-
-const reloader = script => `
-  <script>
-    const source = new EventSource('/livereload');
-    source.onmessage = e => location.reload(true);
-    ${script}
-  </script>
-`;
-
-const ngrok = (protocol, port) => `
-authtoken: 1RJ1wVqDcoolLeIWrzTSRDJt4Wb_73v2muP83AeeNA14wSMY
-tunnels:
-  servor:
-    proto: http
-    addr: ${protocol}://localhost:${port}
-    bind_tls: ${protocol === 'https'}
-`;
 
 const fport = () =>
   new Promise(res => {
@@ -52,36 +15,40 @@ const fport = () =>
     });
   });
 
+const ips = Object.values(os.networkInterfaces())
+  .reduce((every, i) => [...every, ...i], [])
+  .filter(i => i.family === 'IPv4' && i.internal === false)
+  .map(i => i.address);
+
+const mimes = Object.entries(require('./types.json')).reduce(
+  (all, [type, exts]) =>
+    Object.assign(all, ...exts.map(ext => ({ [ext]: type }))),
+  {}
+);
+
+const livereload = `
+  <script>
+    const source = new EventSource('/livereload');
+    source.onmessage = e => location.reload(true);
+    console.log('[servor] listening for file changes');
+  </script>
+`;
+
 module.exports = async ({
   root = '.',
   fallback = 'index.html',
   port,
-  browse = true,
   reload = true,
-  silent = true,
-  secure = false,
-  inject = ''
+  inject,
+  credentials
 } = {}) => {
   port = port || (await fport());
   root = root.startsWith('/') ? root : path.join(cwd, root);
   const clients = [];
-  let requests = 0;
-  let protocol = secure ? 'https' : 'http';
-  let server;
-  let tunnel;
-
-  if (secure) {
-    try {
-      const cert = fs.readFileSync(__dirname + '/servor.crt');
-      const key = fs.readFileSync(__dirname + '/servor.key');
-      server = cb => https.createServer({ cert, key }, cb);
-    } catch (e) {
-      console.log('Please run `servor --certify` to generate ssl credentials!');
-      process.exit();
-    }
-  } else {
-    server = cb => http.createServer(cb);
-  }
+  const protocol = credentials ? 'https' : 'http';
+  const server = credentials
+    ? cb => https.createServer(credentials, cb)
+    : cb => http.createServer(cb);
 
   // Server utility functions
 
@@ -123,9 +90,8 @@ module.exports = async ({
       });
       sendMessage(res, 'connected', 'ready');
       setInterval(sendMessage, 60000, res, 'ping', 'waiting');
-      log(clients.push(res));
+      clients.push(res);
     } else {
-      log(requests++);
       const isRoute = isRouteRequest(pathname);
       const status = isRoute && pathname !== '/' ? 301 : 200;
       const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
@@ -135,7 +101,8 @@ module.exports = async ({
         if (err) return sendError(res, resource, 404);
         fs.readFile(uri, 'binary', (err, file) => {
           if (err) return sendError(res, resource, 500);
-          if (isRoute && reload) file = reloader(inject) + file;
+          if (isRoute && inject) file = inject + file;
+          if (isRoute && reload) file = livereload + file;
           sendFile(res, resource, status, file, ext);
         });
       });
@@ -148,65 +115,13 @@ module.exports = async ({
     fs.watch(root, { recursive: true }, () => {
       while (clients.length > 0)
         sendMessage(clients.pop(), 'message', 'reload');
-      log();
     });
 
-  // Open the page in the default browse
-
-  browse && proc.execSync(`${open} ${protocol}://localhost:${port}`);
-
-  // Log state to the terminal
-
-  !silent && console.log('\n'.repeat(process.stdout.rows));
-  const log = () => {
-    if (silent) return;
-    readline.cursorTo(process.stdout, 0, 0);
-    readline.clearScreenDown(process.stdout);
-    console.log(`
-  🗂  Folder:\t${root}
-  🖥  Route:\t${root}/${fallback}
-
-  ⚙️  Requests:\t${requests} files (${clients.length} livereload listener${
-      clients.length === 1 ? '' : 's'
-    })
-
-  🏡 Local:\t${protocol}://localhost:${port}
-  ${ips
-    .map(ip => `📡 Network:\t${protocol}://${ip.address}:${port}`)
-    .join('\n  ')} 
-  ${
-    typeof tunnel === 'number'
-      ? `🌍 Public:\tEstablishing ngrok tunnel.` +
-        Array.from({ length: tunnel })
-          .map(_ => '.')
-          .join('')
-      : tunnel
-      ? `🌍 Public:\t\x1b[4m${tunnel}\x1b[0m`
-      : `🌍 Public:\tHit \x1b[4mreturn\x1b[0m to generate a public url`
-  }
-`);
+  return {
+    url: `${protocol}://localhost:${port}`,
+    root,
+    protocol,
+    port,
+    ips
   };
-
-  log();
-
-  // Return function to create public url
-
-  return () =>
-    new Promise(resolve => {
-      log((tunnel = 0));
-      const config = __dirname + '/ngrok.yml';
-      fs.writeFileSync(config, ngrok(protocol, port));
-      proc.spawn('npx', ['-q', 'ngrok', 'start', '-config', config, 'servor']);
-      setInterval(function() {
-        try {
-          const data = proc.execSync('curl -s localhost:4040/api/tunnels');
-          const url = (tunnel = JSON.parse(String(data)).tunnels[0].public_url);
-          clearInterval(this);
-          browse && proc.execSync(`${open} ${url}`);
-          log(resolve(url));
-        } catch (e) {
-          log(tunnel++);
-        }
-      }, 1000);
-    });
 };
