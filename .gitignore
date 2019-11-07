@@ -3,5 +3,6 @@
 *.crt
 
 ngrok.yml
+ngrok.token
 
 .DS_Store

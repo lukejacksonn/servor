@@ -71,8 +71,10 @@ const open =
   // Start ngrok if the enter key is pressed
 
   process.stdin.once('data', () =>
-    tunnel(protocol, port).then(url =>
-      console.log(`  🌍 Public:\t\x1b[4m${url}\x1b[0m`)
-    )
+    ~process.argv.indexOf('--secure')
+      ? console.log('  🚧 Public:\tCannot tunnel with the --secure flag')
+      : tunnel(protocol, port).then(url =>
+          console.log(`  🌍 Public:\t\x1b[4m${url}\x1b[0m`)
+        )
   );
 })();

@@ -2,7 +2,6 @@ const fs = require('fs');
 const proc = require('child_process');
 
 const ngrok = (protocol, port) => `
-authtoken: 1RJ1wVqDcoolLeIWrzTSRDJt4Wb_73v2muP83AeeNA14wSMY
 tunnels:
   servor:
     proto: http
