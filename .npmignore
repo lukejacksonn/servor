@@ -3,6 +3,3 @@ test
 *.key
 *.pem
 *.crt
-
-ngrok.yml
-ngrok.token

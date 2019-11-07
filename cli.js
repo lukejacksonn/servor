@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 const fs = require('fs');
 const servor = require('./servor.js');
-const tunnel = require('./tunnel.js');
 
 const readCredentials = () => ({
   cert: fs.readFileSync(__dirname + '/servor.crt'),
@@ -61,20 +60,11 @@ const open =
     console.log(`
   🗂  Serving:\t${root}\n
   🏡 Local:\t${url}
-  ${ips.map(ip => `📡 Network:\t${protocol}://${ip}:${port}`).join('\n  ')}`);
+  ${ips.map(ip => `📡 Network:\t${protocol}://${ip}:${port}`).join('\n  ')}
+  `);
 
   // Browser the server index
 
   ~process.argv.indexOf('--browse') &&
     require('child_process').execSync(`${open} ${url}`);
-
-  // Start ngrok if the enter key is pressed
-
-  process.stdin.once('data', () =>
-    ~process.argv.indexOf('--secure')
-      ? console.log('  🚧 Public:\tCannot tunnel with the --secure flag')
-      : tunnel(protocol, port).then(url =>
-          console.log(`  🌍 Public:\t\x1b[4m${url}\x1b[0m`)
-        )
-  );
 })();

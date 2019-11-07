@@ -2,7 +2,7 @@
 
 > A dependency free dev server for modern web application development
 
-The new and enhanced version of [http-server-spa](https://npmjs.com/http-server-spa). A very compact but capable static file server with https, live reloading and other useful features to support web app development on localhost and over a network.
+The new and enhanced version of [http-server-spa](https://npmjs.com/http-server-spa). A very compact but capable static file server with https, live reloading and other useful features to support web app development on localhost and over a local network.
 
 Servør can be invoked via the command line or programmatically using the node API.
 
@@ -17,8 +17,8 @@ The motivation here was to write a "close to the metal" package from the ground 
 - 🗂 Serves static content like scripts, styles, images from a given directory
 - 🖥 Redirects all path requests to a single file for frontend routing
 - ♻️ Reloads the browser when project files get added, removed or modified
-- 🔐 Supports https with self signed and trusted certificates
-- 🚇 Generates secure public urls for localhost using ngrok
+- 🔐 Supports https with self signed certificates added to the systems trusted store
+- 🔎 Finds available ports to run on if no port is provided
 
 ## CLI Usage
 
@@ -52,10 +52,6 @@ Example usage with npm scripts in a `package.json` file after running `npm i ser
 }
 ```
 
-### Creating a public url
-
-Once the process has started, hit the return key in the terminal window; this will cause [`tunnel.js`](/tunnel.js) to be ran which invokes ngrok via `npx`. A public url will be logged out as soon as a connection has been established.
-
 ### Generating Credentials
 
 > NOTE: This process depends on the `openssl` command existing (tested on macOS only)
@@ -68,7 +64,7 @@ When servor is invoked with the `--secure` flag, it looks for two files `servor.
   - a public certificate (crt) that the server sends to clients
   - a private key for the certificate (key) to encrypt and decrypt traffic
 
-If these steps are all successful then the server will start using https. The credentials are valid but are still not trusted, which means that when the server is opened in the browser for the first time there is likely to be a warning displayed which needs to be acknowledged before continuing. Once the warning has been dismissed once it should not return unless the credentials are regenerated.
+If these steps are all successful then the server will start using https. The credentials are valid but are still not trusted, which means that when viewed in the browser for the first time there is likely to be a warning displayed. Dismiss the warning and it should not return unless the credentials are regenerated.
 
 #### Adding credentials to the trusted store
 
