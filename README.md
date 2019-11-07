@@ -6,11 +6,11 @@ The new and enhanced version of [http-server-spa](https://npmjs.com/http-server-
 
 Servør can be invoked via the command line or programmatically using the node API.
 
-The motivation here was to write a "close to the metal" package from the ground up using no dependencies; only native nodejs and browser APIs to do (what should be) a straightforward task with minimal code.
-
 <hr>
 
 <img src="https://user-images.githubusercontent.com/1457604/68399629-979e8480-016e-11ea-89b3-0f852a018042.gif" alt="servor" width="800">
+
+The motivation here was to write a package from the ground up with no dependencies; using only native node and browser APIs to do a specific task with minimal code.
 
 ## Features
 
@@ -18,7 +18,7 @@ The motivation here was to write a "close to the metal" package from the ground 
 - 🖥 Redirects all path requests to a single file for frontend routing
 - ♻️ Reloads the browser when project files get added, removed or modified
 - 🔐 Supports https with self signed certificates added to the systems trusted store
-- 🔎 Finds available ports to run on if no port is provided
+- 🔎 Discovers freely available ports to serve on if none is provided
 
 ## CLI Usage
 
@@ -36,7 +36,7 @@ Optional flags passed as non-positional arguments:
 
 - `--browse` causes the browser to open when the server starts
 - `--reload` causes the browser to reload when files change
-- `--secure` causes the server to generate credentials and use https
+- `--secure` starts the server with https using generated credentials
 - `--silent` prevents the node process from logging to stdout
 
 Example usage with npm scripts in a `package.json` file after running `npm i servor -D`:
@@ -44,7 +44,7 @@ Example usage with npm scripts in a `package.json` file after running `npm i ser
 ```json
 {
   "devDependencies": {
-    "servor": "3.0.0"
+    "servor": "3.1.0"
   },
   "scripts": {
     "start": "servor www index.html 8080 --reload --browse"
