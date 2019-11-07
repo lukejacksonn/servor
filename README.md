@@ -10,9 +10,9 @@ Servør can be invoked via the command line or programmatically using the node A
 
 <img src="https://user-images.githubusercontent.com/1457604/68399629-979e8480-016e-11ea-89b3-0f852a018042.gif" alt="servor" width="800">
 
-The motivation here was to write a package from the ground up with no dependencies; using only native node and browser APIs to do a specific task with minimal code.
-
 ## Features
+
+The motivation here was to write a package from the ground up with no dependencies; using only native node and browser APIs to do a specific task with minimal code.
 
 - 🗂 Serves static content like scripts, styles, images from a given directory
 - 🖥 Redirects all path requests to a single file for frontend routing
@@ -56,15 +56,13 @@ Example usage with npm scripts in a `package.json` file after running `npm i ser
 
 > NOTE: This process depends on the `openssl` command existing (tested on macOS only)
 
-When servor is invoked with the `--secure` flag, it looks for two files `servor.crt` and `servor.key`. If the files are missing then [`certify.sh`](/certify.sh) is ran which:
+The files `servor.crt` and `servor.key` need to exist for the server to start using https. If the files do not exist when the `--secure` flag is passed, then [`certify.sh`](/certify.sh) is invoked which:
 
 - Creates a local certificate authority used to generate self signed SSL certificates
-- Runs the appropriate `openssl` commands to generate:
+- Runs the appropriate `openssl` commands to produce:
   - a root certificate (pem) so the system will trust the self signed certificate
   - a public certificate (crt) that the server sends to clients
   - a private key for the certificate (key) to encrypt and decrypt traffic
-
-If these steps are all successful then the server will start using https. The credentials are valid but are still not trusted, which means that when viewed in the browser for the first time there is likely to be a warning displayed. Dismiss the warning and it should not return unless the credentials are regenerated.
 
 #### Adding credentials to the trusted store
 
@@ -73,7 +71,7 @@ If these steps are all successful then the server will start using https. The cr
 For the browser to trust self signed certificates the root certificate must be added to the system trusted store. This can be done automatically by running `sudo servor --secure` which:
 
 - Adds the root certificate to the system Keychain Access
-- Prevents the "⚠️ Your connection is not private" warning
+- Prevents the "⚠️ Your connection is not private" screen
 - Makes the 🔒 icon appear in the browsers address bar
 
 The approach was adopted from [@kingkool68/generate-ssl-certs-for-local-development](https://github.com/kingkool68/generate-ssl-certs-for-local-development)
