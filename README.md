@@ -44,7 +44,7 @@ Example usage with npm scripts in a `package.json` file after running `npm i ser
 ```json
 {
   "devDependencies": {
-    "servor": "3.1.0"
+    "servor": "3.0.8"
   },
   "scripts": {
     "start": "servor www index.html 8080 --reload --browse"
@@ -103,7 +103,7 @@ const { url, root, protocol, port, ips }; = servor(config);
 The `inject` property accepts a string that gets prepended to the servers root document (which is `index.html` by default). This could be used to inject config or extend the development servers behavior and capabilities to suit specific environments.
 
 ```js
-const config = require('package.json');
+const config = require("package.json");
 servor({ inject: `<script>window.pkg=${config}</script>` });
 ```
 
