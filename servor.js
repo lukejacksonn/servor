@@ -1,162 +1,127 @@
-#!/usr/bin/env node
-
 const fs = require('fs');
 const url = require('url');
 const path = require('path');
 const http = require('http');
+const https = require('https');
+const os = require('os');
+const net = require('net');
+const cwd = process.cwd();
 
-// ----------------------------------
-// Generate map of all known mimetypes
-// ----------------------------------
+const fport = () =>
+  new Promise(res => {
+    const s = net.createServer().listen(0, () => {
+      const { port } = s.address();
+      s.close(() => res(port));
+    });
+  });
 
-const mime = Object.entries(require('./types.json')).reduce(
+const ips = Object.values(os.networkInterfaces())
+  .reduce((every, i) => [...every, ...i], [])
+  .filter(i => i.family === 'IPv4' && i.internal === false)
+  .map(i => i.address);
+
+const mimes = Object.entries(require('./types.json')).reduce(
   (all, [type, exts]) =>
     Object.assign(all, ...exts.map(ext => ({ [ext]: type }))),
   {}
 );
 
-// ----------------------------------
-// Parse arguments from the command line
-// ----------------------------------
-
-const args = process.argv.slice(2).filter(x => !~x.indexOf('--'));
-
-const root = args[0] || '.';
-const fallback = args[1] || 'index.html';
-const port = args[2] || 8080;
-const reloadPort = args[3] || 5000;
-
-const browser = !~process.argv.indexOf('--no-browser');
-const reload = !~process.argv.indexOf('--no-reload');
-
-const cwd = process.cwd();
-
-// ----------------------------------
-// Template clientside reload script
-// ----------------------------------
-
-const reloadScript = `
+const livereload = `
   <script>
-    const source = new EventSource('http://localhost:${reloadPort}');
+    const source = new EventSource('/livereload');
     source.onmessage = e => location.reload(true);
+    console.log('[servor] listening for file changes');
   </script>
 `;
 
-// ----------------------------------
-// Server utility functions
-// ----------------------------------
+module.exports = async ({
+  root = '.',
+  fallback = 'index.html',
+  port,
+  reload = true,
+  inject,
+  credentials
+} = {}) => {
+  port = port || (await fport());
+  root = root.startsWith('/') ? root : path.join(cwd, root);
+  const clients = [];
+  const protocol = credentials ? 'https' : 'http';
+  const server = credentials
+    ? cb => https.createServer(credentials, cb)
+    : cb => http.createServer(cb);
 
-const sendError = (res, resource, status) => {
-  res.writeHead(status);
-  res.end();
-  console.log(' \x1b[41m', status, '\x1b[0m', `${resource}`);
-};
+  // Server utility functions
 
-const sendFile = (res, resource, status, file, ext) => {
-  res.writeHead(status, {
-    'Content-Type': mime[ext] || 'application/octet-stream',
-    'Access-Control-Allow-Origin': '*'
-  });
-  res.write(file, 'binary');
-  res.end();
-  console.log(' \x1b[42m', status, '\x1b[0m', `${resource}`);
-};
+  const sendError = (res, resource, status) => {
+    res.writeHead(status);
+    res.end();
+  };
 
-const sendMessage = (res, channel, data) => {
-  res.write(`event: ${channel}\nid: 0\ndata: ${data}\n`);
-  res.write('\n\n');
-};
+  const sendFile = (res, resource, status, file, ext) => {
+    res.writeHead(status, {
+      'Content-Type': mimes[ext] || 'application/octet-stream',
+      'Access-Control-Allow-Origin': '*'
+    });
+    res.write(file, 'binary');
+    res.end();
+  };
 
-const isRouteRequest = uri =>
-  uri
-    .split('/')
-    .pop()
-    .indexOf('.') === -1
-    ? true
-    : false;
+  const sendMessage = (res, channel, data) => {
+    res.write(`event: ${channel}\nid: 0\ndata: ${data}\n`);
+    res.write('\n\n');
+  };
 
-// ----------------------------------
-// Start file watching server
-// ----------------------------------
+  const isRouteRequest = pathname =>
+    !~pathname
+      .split('/')
+      .pop()
+      .indexOf('.');
 
-let fileWatcher;
+  // Start the server on the desired port
 
-reload &&
-  http
-    .createServer((request, res) => {
-      // Open the event stream for live reload
+  server((req, res) => {
+    const pathname = url.parse(req.url).pathname;
+    if (reload && pathname === '/livereload') {
       res.writeHead(200, {
         Connection: 'keep-alive',
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Access-Control-Allow-Origin': '*'
       });
-      // Send an initial ack event to stop any network request pending
-      sendMessage(res, 'connected', 'awaiting change');
-      // Send a ping event every minute to prevent console errors
-      setInterval(sendMessage, 60000, res, 'ping', 'still waiting');
-      // Watch the target directory for changes and trigger reload
-      fileWatcher && fileWatcher.close();
-      fileWatcher = fs.watch(path.join(cwd, root), { recursive: true }, () =>
-        sendMessage(res, 'message', 'reloading page')
-      );
-    })
-    .listen(parseInt(reloadPort, 10));
-
-// ----------------------------------
-// Start static file server
-// ----------------------------------
-
-http
-  .createServer((req, res) => {
-    const pathname = url.parse(req.url).pathname;
-    const isRoute = isRouteRequest(pathname);
-    const status = isRoute && pathname !== '/' ? 301 : 200;
-    const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
-    const uri = path.join(cwd, root, resource);
-    const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
-    isRoute && console.log('\n \x1b[44m', 'RELOADING', '\x1b[0m\n');
-    // Check if files exists at the location
-    fs.stat(uri, (err, stat) => {
-      if (err) return sendError(res, resource, 404);
-      // Respond with the contents of the file
-      fs.readFile(uri, 'binary', (err, file) => {
-        if (err) return sendError(res, resource, 500);
-        if (isRoute && reload) file += reloadScript;
-        sendFile(res, resource, status, file, ext);
+      sendMessage(res, 'connected', 'ready');
+      setInterval(sendMessage, 60000, res, 'ping', 'waiting');
+      clients.push(res);
+    } else {
+      const isRoute = isRouteRequest(pathname);
+      const status = isRoute && pathname !== '/' ? 301 : 200;
+      const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
+      const uri = path.join(root, resource);
+      const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
+      fs.stat(uri, (err, stat) => {
+        if (err) return sendError(res, resource, 404);
+        fs.readFile(uri, 'binary', (err, file) => {
+          if (err) return sendError(res, resource, 500);
+          if (isRoute && inject) file = inject + file;
+          if (isRoute && reload) file = livereload + file;
+          sendFile(res, resource, status, file, ext);
+        });
       });
+    }
+  }).listen(parseInt(port, 10));
+
+  // Notify livereload clients on file change
+
+  reload &&
+    fs.watch(root, { recursive: true }, () => {
+      while (clients.length > 0)
+        sendMessage(clients.pop(), 'message', 'reload');
     });
-  })
-  .listen(parseInt(port, 10));
 
-// ----------------------------------
-// Get available IP addresses
-// ----------------------------------
-const interfaces = require('os').networkInterfaces();
-const ips = Object.values(interfaces)
-  .reduce((a, b) => [...a, ...b], [])
-  .filter(ip => ip.family === 'IPv4' && ip.internal === false)
-  .map(ip => `http://${ip.address}:${port}`);
-
-// ----------------------------------
-// Log startup details to terminal
-// ----------------------------------
-
-console.log(`\n 🗂  Serving files from ./${root} on http://localhost:${port}`);
-ips.length > 0 && console.log(` 📡 Exposed to the network on ${ips[0]}`);
-console.log(` 🖥  Using ${fallback} as the fallback for route requests`);
-console.log(` ♻️  Reloading the browser when files under ./${root} change`);
-
-// ----------------------------------
-// Open the page in the default browser
-// ----------------------------------
-
-const page = `http://localhost:${port}`;
-const open =
-  process.platform == 'darwin'
-    ? 'open'
-    : process.platform == 'win32'
-    ? 'start'
-    : 'xdg-open';
-
-browser && require('child_process').exec(open + ' ' + page);
+  return {
+    url: `${protocol}://localhost:${port}`,
+    root,
+    protocol,
+    port,
+    ips
+  };
+};

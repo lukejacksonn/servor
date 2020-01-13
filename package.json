@@ -1,11 +1,11 @@
 {
   "name": "servor",
-  "version": "2.2.1",
+  "version": "3.0.7",
   "description": "A dependency free dev server for single page app development",
   "repository": "lukejacksonn/servor",
   "main": "./servor.js",
   "bin": {
-    "servor": "./servor.js"
+    "servor": "./cli.js"
   },
   "keywords": [
     "development",
@@ -15,8 +15,9 @@
     "reload"
   ],
   "scripts": {
-    "test": "node servor test index.html 8080 5000",
-    "start": "node servor"
+    "cleanup": "rm -f servor.key servor.crt",
+    "test": "node cli test --browse --reload",
+    "test:secure": "yarn test --secure"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
   "license": "MIT"
