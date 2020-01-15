@@ -7,11 +7,13 @@ const os = require('os');
 const net = require('net');
 const cwd = process.cwd();
 
-const fport = () =>
-  new Promise(res => {
-    const s = net.createServer().listen(0, () => {
+const fport = (p = 0) =>
+  new Promise((resolve, reject) => {
+    const s = net.createServer();
+    s.on('error', reject);
+    s.listen(p, () => {
       const { port } = s.address();
-      s.close(() => res(port));
+      s.close(() => resolve(port));
     });
   });
 
@@ -42,7 +44,15 @@ module.exports = async ({
   inject,
   credentials
 } = {}) => {
-  port = port || (await fport());
+  try {
+    port = await fport(port || 8080);
+  } catch {
+    if (port) {
+      console.log('[ERR] The port you have specified is already in use!');
+      process.exit();
+    }
+    port = await fport();
+  }
   root = root.startsWith('/') ? root : path.join(cwd, root);
   const clients = [];
   const protocol = credentials ? 'https' : 'http';
