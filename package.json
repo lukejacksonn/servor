@@ -20,5 +20,8 @@
     "test:secure": "yarn test --secure"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "node-watch": "^0.6.3"
+  }
 }

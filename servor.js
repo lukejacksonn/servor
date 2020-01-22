@@ -6,6 +6,7 @@ const https = require('https');
 const os = require('os');
 const net = require('net');
 const cwd = process.cwd();
+const watch = require('node-watch')
 
 const fport = (p = 0) =>
   new Promise((resolve, reject) => {
@@ -122,7 +123,7 @@ module.exports = async ({
   // Notify livereload clients on file change
 
   reload &&
-    fs.watch(root, { recursive: true }, () => {
+    watch(root, { recursive: true }, () => {
       while (clients.length > 0)
         sendMessage(clients.pop(), 'message', 'reload');
     });
