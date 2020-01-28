@@ -7,6 +7,13 @@ const os = require('os');
 const net = require('net');
 const cwd = process.cwd();
 
+const watch = (path, cb) => {
+  if (fs.statSync(path).isDirectory()) {
+    fs.watch(path, cb);
+    fs.readdirSync(path).forEach(entry => watch(`${path}/${entry}`, cb));
+  }
+};
+
 const fport = (p = 0) =>
   new Promise((resolve, reject) => {
     const s = net.createServer();
@@ -122,7 +129,7 @@ module.exports = async ({
   // Notify livereload clients on file change
 
   reload &&
-    fs.watch(root, { recursive: true }, () => {
+    watch(root, () => {
       while (clients.length > 0)
         sendMessage(clients.pop(), 'message', 'reload');
     });
