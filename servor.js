@@ -46,7 +46,7 @@ module.exports = async ({
 } = {}) => {
   try {
     port = await fport(port || process.env.PORT || 8080);
-  } catch {
+  } catch(e) {
     if (port || process.env.PORT) {
       console.log('[ERR] The port you have specified is already in use!');
       process.exit();
