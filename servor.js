@@ -41,7 +41,9 @@ const mimes = Object.entries(require('./types.json')).reduce(
 const livereload = `
   <script>
     const source = new EventSource('/livereload');
-    source.onmessage = e => location.reload(true);
+    const reload = () => location.reload(true);
+    source.onmessage = reload;
+    source.onerror = () => (source.onopen = reload);
     console.log('[servor] listening for file changes');
   </script>
 `;
@@ -136,6 +138,11 @@ module.exports = async ({
       while (clients.length > 0)
         sendMessage(clients.pop(), 'message', 'reload');
     });
+
+  process.on('SIGINT', () => {
+    while (clients.length > 0) clients.pop().end();
+    process.exit();
+  });
 
   return {
     url: `${protocol}://localhost:${port}`,
