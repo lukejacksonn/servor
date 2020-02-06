@@ -82,7 +82,7 @@ Use servor programmatically with node by requiring it as a module in your script
 
 ```js
 const servor = require('servor');
-const instance = servor({
+const instance = await servor({
   root: '.',
   fallback: 'index.html',
   port: 8080,
@@ -95,7 +95,7 @@ const instance = servor({
 The `servor` function accepts a config object with optional props assigned the above default values if none are provided. Calling the `servor` function starts up a new server and returns an object describing its configuration.
 
 ```js
-const { url, root, protocol, port, ips }; = servor(config);
+const { url, root, protocol, port, ips } = await servor(config);
 ```
 
 ### Inject
