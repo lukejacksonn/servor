@@ -7,12 +7,15 @@ const os = require('os');
 const net = require('net');
 const cwd = process.cwd();
 
-const watch = (path, cb) => {
-  if (fs.statSync(path).isDirectory()) {
-    fs.watch(path, cb);
-    fs.readdirSync(path).forEach(entry => watch(`${path}/${entry}`, cb));
-  }
-};
+const watch =
+  process.platform === 'linux'
+    ? (path, cb) => {
+        if (fs.statSync(path).isDirectory()) {
+          fs.watch(path, cb);
+          fs.readdirSync(path).forEach(entry => watch(`${path}/${entry}`, cb));
+        }
+      }
+    : (path, cb) => fs.watch(path, { recursive: true }, cb);
 
 const fport = (p = 0) =>
   new Promise((resolve, reject) => {
