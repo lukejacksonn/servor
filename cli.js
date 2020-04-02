@@ -50,7 +50,8 @@ const open =
     root: args[0],
     fallback: args[1],
     port: args[2],
-    reload: ~process.argv.indexOf('--reload'),
+    reload: !!~process.argv.indexOf('--reload'),
+    static: !!~process.argv.indexOf('--static'),
     credentials
   });
 
@@ -65,6 +66,6 @@ const open =
 
   // Browser the server index
 
-  ~process.argv.indexOf('--browse') &&
+  !!~process.argv.indexOf('--browse') &&
     require('child_process').execSync(`${open} ${url}`);
 })();

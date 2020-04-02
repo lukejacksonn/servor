@@ -53,12 +53,13 @@ module.exports = async ({
   fallback = 'index.html',
   port,
   reload = true,
+  static = false,
   inject,
   credentials
 } = {}) => {
   try {
     port = await fport(port || process.env.PORT || 8080);
-  } catch(e) {
+  } catch (e) {
     if (port || process.env.PORT) {
       console.log('[ERR] The port you have specified is already in use!');
       process.exit();
@@ -93,6 +94,9 @@ module.exports = async ({
     res.write('\n\n');
   };
 
+  const indexFileExists = pathname =>
+    fs.existsSync(`${root}${pathname}/index.html`);
+
   const isRouteRequest = pathname =>
     !~pathname
       .split('/')
@@ -115,8 +119,13 @@ module.exports = async ({
       clients.push(res);
     } else {
       const isRoute = isRouteRequest(pathname);
+      const hasIndex = isRoute && static && indexFileExists(pathname);
       const status = isRoute && pathname !== '/' ? 301 : 200;
-      const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
+      const resource = isRoute
+        ? hasIndex
+          ? `/${decodeURI(pathname)}/index.html`
+          : `/${fallback}`
+        : decodeURI(pathname);
       const uri = path.join(root, resource);
       const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
       fs.stat(uri, (err, stat) => {
