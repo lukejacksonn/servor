@@ -37,6 +37,7 @@ Optional flags passed as non-positional arguments:
 
 - `--browse` causes the browser to open when the server starts
 - `--reload` causes the browser to reload when files change
+- `--static` causes the server to route nested index.html files if they exist
 - `--secure` starts the server with https using generated credentials
 - `--silent` prevents the node process from logging to stdout
 
