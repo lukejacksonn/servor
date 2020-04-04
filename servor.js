@@ -124,7 +124,7 @@ module.exports = async ({
         fs.readFile(uri, 'binary', (err, file) => {
           if (err) return sendError(res, resource, 500);
           if (isRoute && inject) file = inject + file;
-          if (isRoute && reload) file = livereload + file;
+          if (isRoute && reload) file = file + livereload;
           sendFile(res, resource, status, file, ext);
         });
       });
