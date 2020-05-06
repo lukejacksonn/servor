@@ -2,7 +2,7 @@
 
 > A dependency free dev server for modern web application development
 
-The new and enhanced version of [http-server-spa](https://npmjs.com/http-server-spa). A very compact but capable static file server with https, live reloading and other useful features to support web app development on localhost and over a local network.
+The new and enhanced version of [http-server-spa](https://npmjs.com/http-server-spa). A very compact but capable static file server with https, live reloading, gzip and other useful features to support web app development on localhost and over a local network.
 
 Servør can be invoked via the command line or programmatically using the node API.
 
@@ -15,9 +15,10 @@ Servør can be invoked via the command line or programmatically using the node A
 The motivation here was to write a package from the ground up with no dependencies; using only native node and browser APIs to do a specific task with minimal code.
 
 - 🗂 Serves static content like scripts, styles, images from a given directory
-- 🖥 Redirects all path requests to a single file for frontend routing
+- 🗜 Uses gzip on common filetypes like html, css and js to give a production feel
 - ♻️ Reloads the browser when project files get added, removed or modified
 - 🔐 Supports https with self signed certificates added to the systems trusted store
+- 🖥 Redirects all path requests to a single file for frontend routing
 - 🔎 Discovers freely available ports to serve on if no port is specified
 
 ## CLI Usage
