@@ -40,24 +40,16 @@ const mimes = Object.entries(require('./types.json')).reduce(
   {}
 );
 
-const livereload = `
-  <script>
-    const source = new EventSource('/livereload');
-    const reload = () => location.reload(true);
-    source.onmessage = reload;
-    source.onerror = () => (source.onopen = reload);
-    console.log('[servor] listening for file changes');
-  </script>
-`;
-
 module.exports = async ({
   root = '.',
   fallback = 'index.html',
   port,
   reload = true,
-  inject,
+  inject = '',
   credentials,
 } = {}) => {
+  // Try start on specified port or find a free one
+
   try {
     port = await fport(port || process.env.PORT || 8080);
   } catch (e) {
@@ -67,6 +59,9 @@ module.exports = async ({
     }
     port = await fport();
   }
+
+  // Configure globals
+
   root = root.startsWith('/') ? root : path.join(cwd, root);
   const clients = [];
   const protocol = credentials ? 'https' : 'http';
@@ -74,14 +69,26 @@ module.exports = async ({
     ? (cb) => https.createServer(credentials, cb)
     : (cb) => http.createServer(cb);
 
+  const livereload = reload
+    ? `
+    <script>
+      const source = new EventSource('/livereload');
+      const reload = () => location.reload(true);
+      source.onmessage = reload;
+      source.onerror = () => (source.onopen = reload);
+      console.log('[servor] listening for file changes');
+    </script>
+  `
+    : '';
+
   // Server utility functions
 
-  const sendError = (res, resource, status) => {
+  const sendError = (res, status) => {
     res.writeHead(status);
     res.end();
   };
 
-  const sendFile = (res, resource, status, file, ext) => {
+  const sendFile = (res, status, file, ext) => {
     res.writeHead(status, {
       'Content-Type': mimes[ext] || 'application/octet-stream',
       'Access-Control-Allow-Origin': '*',
@@ -117,13 +124,12 @@ module.exports = async ({
       const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
       const uri = path.join(root, resource);
       const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
-      fs.stat(uri, (err, stat) => {
-        if (err) return sendError(res, resource, 404);
+      fs.stat(uri, (err) => {
+        if (err) return sendError(res, 404);
         fs.readFile(uri, 'binary', (err, file) => {
-          if (err) return sendError(res, resource, 500);
-          if (isRoute && inject) file = file + inject;
-          if (isRoute && reload) file = file + livereload;
-          sendFile(res, resource, status, file, ext);
+          if (err) return sendError(res, 500);
+          if (isRoute) file = file + inject + livereload;
+          sendFile(res, status, file, ext);
         });
       });
     }
@@ -136,6 +142,8 @@ module.exports = async ({
       while (clients.length > 0)
         sendMessage(clients.pop(), 'message', 'reload');
     });
+
+  // Close socket connections on sigint
 
   process.on('SIGINT', () => {
     while (clients.length > 0) clients.pop().end();
