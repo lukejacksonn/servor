@@ -28,7 +28,7 @@ const open =
 
   if (~process.argv.indexOf('--secure')) {
     admin && certify();
-    process.setuid(501);
+    admin && process.platform === 'darwin' && process.setuid(501);
     try {
       credentials = readCredentials();
     } catch (e) {
