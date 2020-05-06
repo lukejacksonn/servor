@@ -5,6 +5,7 @@ const http = require('http');
 const https = require('https');
 const os = require('os');
 const net = require('net');
+const zlib = require('zlib');
 const cwd = process.cwd();
 
 const watch =
@@ -88,12 +89,18 @@ module.exports = async ({
     res.end();
   };
 
-  const sendFile = (res, status, file, ext) => {
+  const sendFile = (res, status, file, ext, encoding = 'binary') => {
+    if (['js', 'css', 'html', 'json', 'xml', 'svg'].includes(ext)) {
+      res.removeHeader('Content-Length');
+      res.setHeader('Content-Encoding', 'gzip');
+      file = zlib.gzipSync(Buffer.from(file, 'binary').toString('utf8'));
+      encoding = 'utf8';
+    }
     res.writeHead(status, {
       'Content-Type': mimes[ext] || 'application/octet-stream',
       'Access-Control-Allow-Origin': '*',
     });
-    res.write(file, 'binary');
+    res.write(file, encoding);
     res.end();
   };
 
