@@ -12,7 +12,9 @@ const watch =
     ? (path, cb) => {
         if (fs.statSync(path).isDirectory()) {
           fs.watch(path, cb);
-          fs.readdirSync(path).forEach(entry => watch(`${path}/${entry}`, cb));
+          fs.readdirSync(path).forEach((entry) =>
+            watch(`${path}/${entry}`, cb)
+          );
         }
       }
     : (path, cb) => fs.watch(path, { recursive: true }, cb);
@@ -29,12 +31,12 @@ const fport = (p = 0) =>
 
 const ips = Object.values(os.networkInterfaces())
   .reduce((every, i) => [...every, ...i], [])
-  .filter(i => i.family === 'IPv4' && i.internal === false)
-  .map(i => i.address);
+  .filter((i) => i.family === 'IPv4' && i.internal === false)
+  .map((i) => i.address);
 
 const mimes = Object.entries(require('./types.json')).reduce(
   (all, [type, exts]) =>
-    Object.assign(all, ...exts.map(ext => ({ [ext]: type }))),
+    Object.assign(all, ...exts.map((ext) => ({ [ext]: type }))),
   {}
 );
 
@@ -54,11 +56,11 @@ module.exports = async ({
   port,
   reload = true,
   inject,
-  credentials
+  credentials,
 } = {}) => {
   try {
     port = await fport(port || process.env.PORT || 8080);
-  } catch(e) {
+  } catch (e) {
     if (port || process.env.PORT) {
       console.log('[ERR] The port you have specified is already in use!');
       process.exit();
@@ -69,8 +71,8 @@ module.exports = async ({
   const clients = [];
   const protocol = credentials ? 'https' : 'http';
   const server = credentials
-    ? cb => https.createServer(credentials, cb)
-    : cb => http.createServer(cb);
+    ? (cb) => https.createServer(credentials, cb)
+    : (cb) => http.createServer(cb);
 
   // Server utility functions
 
@@ -82,7 +84,7 @@ module.exports = async ({
   const sendFile = (res, resource, status, file, ext) => {
     res.writeHead(status, {
       'Content-Type': mimes[ext] || 'application/octet-stream',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
     });
     res.write(file, 'binary');
     res.end();
@@ -93,11 +95,7 @@ module.exports = async ({
     res.write('\n\n');
   };
 
-  const isRouteRequest = pathname =>
-    !~pathname
-      .split('/')
-      .pop()
-      .indexOf('.');
+  const isRouteRequest = (pathname) => !~pathname.split('/').pop().indexOf('.');
 
   // Start the server on the desired port
 
@@ -108,7 +106,7 @@ module.exports = async ({
         Connection: 'keep-alive',
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
       });
       sendMessage(res, 'connected', 'ready');
       setInterval(sendMessage, 60000, res, 'ping', 'waiting');
@@ -149,6 +147,6 @@ module.exports = async ({
     root,
     protocol,
     port,
-    ips
+    ips,
   };
 };
