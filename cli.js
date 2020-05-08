@@ -51,6 +51,7 @@ const open =
     fallback: args[1],
     port: args[2],
     reload: !!~process.argv.indexOf('--reload'),
+    module: !!~process.argv.indexOf('--module'),
     credentials,
   });
 
