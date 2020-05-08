@@ -47,8 +47,8 @@ module.exports = async ({
   fallback = 'index.html',
   port,
   reload = true,
-  static = false,
-  inject = '',
+  routes = false,
+  inject,
   credentials,
 } = {}) => {
   // Try start on specified port or find a free one
@@ -134,10 +134,10 @@ module.exports = async ({
       clients.push(res);
     } else {
       const isRoute = isRouteRequest(pathname);
-      const hasIndex = isRoute && static && indexFileExists(pathname);
+      const hasRoute = isRoute && routes && indexFileExists(pathname);
       const status = isRoute && pathname !== '/' ? 301 : 200;
       const resource = isRoute
-        ? hasIndex
+        ? hasRoute
           ? `/${decodeURI(pathname)}/${fallback}`
           : `/${fallback}`
         : decodeURI(pathname);
@@ -150,7 +150,7 @@ module.exports = async ({
           if (err) return sendError(res, resource, 500);
           if (isRoute && inject) file = inject + file;
           if (isRoute && reload) file = livereload + file;
-          if (isRoute && hasIndex)
+          if (isRoute && hasRoute)
             file = `<!doctype html><base href="${base}" />` + file;
           sendFile(res, resource, status, file, ext);
         });
