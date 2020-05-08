@@ -48,7 +48,7 @@ module.exports = async ({
   port,
   reload = true,
   routes = false,
-  inject,
+  inject = '',
   credentials,
 } = {}) => {
   // Try start on specified port or find a free one
@@ -144,15 +144,14 @@ module.exports = async ({
       const uri = path.join(root, resource);
       const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
       const base = path.join('/', pathname, '/');
-      fs.stat(uri, (err, stat) => {
-        if (err) return sendError(res, resource, 404);
+      fs.stat(uri, (err) => {
+        if (err) return sendError(res, 404);
         fs.readFile(uri, 'binary', (err, file) => {
-          if (err) return sendError(res, resource, 500);
-          if (isRoute && inject) file = inject + file;
-          if (isRoute && reload) file = livereload + file;
+          if (err) return sendError(res, 500);
+          if (isRoute) file = file + inject + livereload;
           if (isRoute && hasRoute)
             file = `<!doctype html><base href="${base}" />` + file;
-          sendFile(res, resource, status, file, ext);
+          sendFile(res, status, file, ext);
         });
       });
     }

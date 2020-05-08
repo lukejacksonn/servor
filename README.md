@@ -37,7 +37,7 @@ Optional flags passed as non-positional arguments:
 
 - `--browse` causes the browser to open when the server starts
 - `--reload` causes the browser to reload when files change
-- `--static` causes the server to route nested index.html files if they exist
+- `--routes` causes the server to route nested index.html files if they exist
 - `--secure` starts the server with https using generated credentials
 - `--silent` prevents the node process from logging to stdout
 
@@ -89,6 +89,7 @@ const instance = await servor({
   fallback: 'index.html',
   port: 8080,
   reload: false,
+  routes: false,
   inject: ''
   credentials: {},
 });
