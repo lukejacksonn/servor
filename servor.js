@@ -113,9 +113,10 @@ module.exports = async ({
     res.write('\n\n');
   };
 
-  const isRouteRequest = (pathname) => !~pathname.split('/').pop().indexOf('.');
   const indexFileExists = (pathname) =>
     fs.existsSync(`${root}${pathname}/index.html`);
+
+  const isRouteRequest = (pathname) => !~pathname.split('/').pop().indexOf('.');
 
   // Start the server on the desired port
 
@@ -137,17 +138,21 @@ module.exports = async ({
       const status = isRoute && pathname !== '/' ? 301 : 200;
       const resource = isRoute
         ? hasIndex
-          ? `/${decodeURI(pathname)}/index.html`
+          ? `/${decodeURI(pathname)}/${fallback}`
           : `/${fallback}`
         : decodeURI(pathname);
       const uri = path.join(root, resource);
       const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
-      fs.stat(uri, (err) => {
-        if (err) return sendError(res, 404);
+      const base = path.join('/', pathname, '/');
+      fs.stat(uri, (err, stat) => {
+        if (err) return sendError(res, resource, 404);
         fs.readFile(uri, 'binary', (err, file) => {
-          if (err) return sendError(res, 500);
-          if (isRoute) file = file + inject + livereload;
-          sendFile(res, status, file, ext);
+          if (err) return sendError(res, resource, 500);
+          if (isRoute && inject) file = inject + file;
+          if (isRoute && reload) file = livereload + file;
+          if (isRoute && hasIndex)
+            file = `<!doctype html><base href="${base}" />` + file;
+          sendFile(res, resource, status, file, ext);
         });
       });
     }
