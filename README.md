@@ -15,11 +15,12 @@ Servør can be invoked via the command line or programmatically using the node A
 The motivation here was to write a package from the ground up with no dependencies; using only native node and browser APIs to do a specific task with minimal code.
 
 - 🗂 Serves static content like scripts, styles, images from a given directory
-- 🗜 Uses gzip on common filetypes like html, css and js to give a production feel
 - ♻️ Reloads the browser when project files get added, removed or modified
+- 🗜 Uses gzip on common filetypes like html, css, js and json
 - 🔐 Supports https and http2 with trusted self signed certificates
 - 🖥 Redirects all path requests to a single file for frontend routing
-- 🔎 Discovers freely available ports to serve on if no port is specified
+- 📦 Accepts both HTML and JavaScript files as the root file for a directory
+- 🔎 Discovers freely available ports to start on by default
 
 ## CLI Usage
 
@@ -38,7 +39,8 @@ Optional flags passed as non-positional arguments:
 - `--browse` causes the browser to open when the server starts
 - `--reload` causes the browser to reload when files change
 - `--secure` starts the server with https using generated credentials
-- `--silent` prevents the node process from logging to stdout
+- `--silent` prevents the server node process from logging to stdout
+- `--module` causes the server to wrap the root in script type module tags
 
 Example usage with npm scripts in a `package.json` file after running `npm i servor -D`:
 
@@ -55,7 +57,7 @@ Example usage with npm scripts in a `package.json` file after running `npm i ser
 
 ### Generating Credentials
 
-> NOTE: This process depends on the `openssl` command existing (tested on macOS only)
+> NOTE: This process depends on the `openssl` command existing (tested on macOS and linux only)
 
 The files `servor.crt` and `servor.key` need to exist for the server to start using https. If the files do not exist when the `--secure` flag is passed, then [`certify.sh`](/certify.sh) is invoked which:
 
@@ -101,7 +103,7 @@ const { url, root, protocol, port, ips } = await servor(config);
 
 ### Inject
 
-The `inject` property accepts a string that gets prepended to the servers root document (which is `index.html` by default). This could be used to inject config or extend the development servers behavior and capabilities to suit specific environments.
+The `inject` property accepts a string that gets appended to the servers root document (which is `index.html` by default). This could be used to inject config or extend the development servers behavior and capabilities to suit specific environments.
 
 ```js
 const config = require('package.json');

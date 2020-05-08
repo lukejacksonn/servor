@@ -44,7 +44,8 @@ const mimes = Object.entries(require('./types.json')).reduce(
 
 module.exports = async ({
   root = '.',
-  fallback = 'index.html',
+  module = false,
+  fallback = module ? 'index.js' : 'index.html',
   port,
   reload = true,
   inject = '',
@@ -87,6 +88,8 @@ module.exports = async ({
 
   // Server utility functions
 
+  const utf8 = (file) => Buffer.from(file, 'binary').toString('utf8');
+
   const sendError = (res, status) => {
     res.writeHead(status);
     res.end();
@@ -96,7 +99,7 @@ module.exports = async ({
     if (['js', 'css', 'html', 'json', 'xml', 'svg'].includes(ext)) {
       res.removeHeader('Content-Length');
       res.setHeader('Content-Encoding', 'gzip');
-      file = zlib.gzipSync(Buffer.from(file, 'binary').toString('utf8'));
+      file = zlib.gzipSync(utf8(file));
       encoding = 'utf8';
     }
     res.writeHead(status, {
@@ -133,11 +136,15 @@ module.exports = async ({
       const status = isRoute && pathname !== '/' ? 301 : 200;
       const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
       const uri = path.join(root, resource);
-      const ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
+      let ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
       fs.stat(uri, (err) => {
         if (err) return sendError(res, 404);
         fs.readFile(uri, 'binary', (err, file) => {
           if (err) return sendError(res, 500);
+          if (isRoute && module) {
+            file = `<!DOCTYPE html><meta charset='utf-8'/><script type='module'>${file}</script>`;
+            ext = 'html';
+          }
           if (isRoute) file = file + inject + livereload;
           sendFile(res, status, file, ext);
         });
