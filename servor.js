@@ -2,6 +2,7 @@ const fs = require('fs');
 const url = require('url');
 const path = require('path');
 const http = require('http');
+const http2 = require('http2');
 const https = require('https');
 const os = require('os');
 const net = require('net');
@@ -67,7 +68,9 @@ module.exports = async ({
   const clients = [];
   const protocol = credentials ? 'https' : 'http';
   const server = credentials
-    ? (cb) => https.createServer(credentials, cb)
+    ? reload
+      ? (cb) => https.createServer(credentials, cb)
+      : (cb) => http2.createSecureServer(credentials, cb)
     : (cb) => http.createServer(cb);
 
   const livereload = reload
