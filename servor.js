@@ -48,6 +48,7 @@ module.exports = async ({
   fallback = module ? 'index.js' : 'index.html',
   port,
   reload = true,
+  routes = false,
   inject = '',
   credentials,
 } = {}) => {
@@ -115,6 +116,9 @@ module.exports = async ({
     res.write('\n\n');
   };
 
+  const indexFileExists = (pathname) =>
+    fs.existsSync(`${root}${pathname}/${fallback}`);
+
   const isRouteRequest = (pathname) => !~pathname.split('/').pop().indexOf('.');
 
   // Start the server on the desired port
@@ -133,19 +137,26 @@ module.exports = async ({
       clients.push(res);
     } else {
       const isRoute = isRouteRequest(pathname);
+      const hasRoute = isRoute && routes && indexFileExists(pathname);
       const status = isRoute && pathname !== '/' ? 301 : 200;
-      const resource = isRoute ? `/${fallback}` : decodeURI(pathname);
+      const resource = isRoute
+        ? hasRoute
+          ? `/${decodeURI(pathname)}/${fallback}`
+          : `/${fallback}`
+        : decodeURI(pathname);
       const uri = path.join(root, resource);
       let ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
       fs.stat(uri, (err) => {
         if (err) return sendError(res, 404);
         fs.readFile(uri, 'binary', (err, file) => {
           if (err) return sendError(res, 500);
-          if (isRoute && module) {
-            file = `<!DOCTYPE html><meta charset='utf-8'/><script type='module'>${file}</script>`;
+          if (isRoute) {
+            const base = path.join('/', pathname, '/');
+            const doc = `<!doctype html><meta charset="utf-8"/><base href="${base}"/>`;
+            if (module) file = `<script type='module'>${file}</script>`;
+            file = doc + file + inject + livereload;
             ext = 'html';
           }
-          if (isRoute) file = file + inject + livereload;
           sendFile(res, status, file, ext);
         });
       });
