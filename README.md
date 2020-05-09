@@ -17,7 +17,7 @@ The motivation here was to write a package from the ground up with no dependenci
 - 🗂 Serves static content like scripts, styles, images from a given directory
 - 🗜 Uses gzip on common filetypes like html, css and js to give a production feel
 - ♻️ Reloads the browser when project files get added, removed or modified
-- 🔐 Supports https with self signed certificates added to the systems trusted store
+- 🔐 Supports https and http2 with trusted self signed certificates
 - 🖥 Redirects all path requests to a single file for frontend routing
 - 🔎 Discovers freely available ports to serve on if no port is specified
 
