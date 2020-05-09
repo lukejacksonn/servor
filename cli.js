@@ -52,6 +52,7 @@ const open =
     port: args[2],
     reload: !!~process.argv.indexOf('--reload'),
     module: !!~process.argv.indexOf('--module'),
+    routes: !!~process.argv.indexOf('--routes'),
     credentials,
   });
 
