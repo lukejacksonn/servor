@@ -16,9 +16,11 @@
   ],
   "scripts": {
     "cleanup": "rm -f servor.key servor.crt",
-    "test": "node cli test --browse --reload",
-    "test:secure": "yarn test --secure"
+    "test": "npm run cleanup && node test.js"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "puppeteer": "^3.0.4"
+  }
 }
