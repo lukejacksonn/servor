@@ -1,3 +1,5 @@
+/* SERVOR_TEST_NESTED_MODULE_INDEX */
+
 import { react, html, css } from 'https://unpkg.com/rplus';
 
 const style = css`

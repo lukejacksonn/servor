@@ -92,7 +92,8 @@ module.exports = async ({
   const utf8 = (file) => Buffer.from(file, 'binary').toString('utf8');
 
   const sendError = (res, status) => {
-    res.writeHead(status);
+    res.writeHead(status, { 'Access-Control-Allow-Origin': '*' });
+    res.write(`${status}`);
     res.end();
   };
 
@@ -121,44 +122,47 @@ module.exports = async ({
 
   const isRouteRequest = (pathname) => !~pathname.split('/').pop().indexOf('.');
 
+  const registerClient = (res) => {
+    res.writeHead(200, {
+      Connection: 'keep-alive',
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Access-Control-Allow-Origin': '*',
+    });
+    sendMessage(res, 'connected', 'ready');
+    setInterval(sendMessage, 60000, res, 'ping', 'waiting');
+    clients.push(res);
+  };
+
   // Start the server on the desired port
 
   server((req, res) => {
     const pathname = url.parse(req.url).pathname;
-    if (reload && pathname === '/livereload') {
-      res.writeHead(200, {
-        Connection: 'keep-alive',
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Access-Control-Allow-Origin': '*',
-      });
-      sendMessage(res, 'connected', 'ready');
-      setInterval(sendMessage, 60000, res, 'ping', 'waiting');
-      clients.push(res);
-    } else {
+    if (reload && pathname === '/livereload') registerClient(res);
+    else {
       const isRoute = isRouteRequest(pathname);
-      const hasRoute = isRoute && routes && indexFileExists(pathname);
-      const status = isRoute && pathname !== '/' ? 301 : 200;
+      const hasIndex = isRoute && routes && indexFileExists(pathname);
+      const status = !isRoute || hasIndex || pathname === '/' ? 200 : 301;
+      console.log(status, pathname, !isRoute || hasIndex || pathname === '/');
+
       const resource = isRoute
-        ? hasRoute
+        ? hasIndex
           ? `/${decodeURI(pathname)}/${fallback}`
           : `/${fallback}`
         : decodeURI(pathname);
       const uri = path.join(root, resource);
       let ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
-      fs.stat(uri, (err) => {
-        if (err) return sendError(res, 404);
-        fs.readFile(uri, 'binary', (err, file) => {
-          if (err) return sendError(res, 500);
-          if (isRoute) {
-            const base = path.join('/', pathname, '/');
-            const doc = `<!doctype html><meta charset="utf-8"/><base href="${base}"/>`;
-            if (module) file = `<script type='module'>${file}</script>`;
-            file = doc + file + inject + livereload;
-            ext = 'html';
-          }
-          sendFile(res, status, file, ext);
-        });
+      if (!fs.existsSync(uri)) return sendError(res, 404);
+      fs.readFile(uri, 'binary', (err, file) => {
+        if (err) return sendError(res, 500);
+        if (isRoute) {
+          const base = path.join('/', pathname, '/');
+          const doc = `<!doctype html><meta charset="utf-8"/><base href="${base}"/>`;
+          if (module) file = `<script type='module'>${file}</script>`;
+          file = doc + file + inject + livereload;
+          ext = 'html';
+        }
+        sendFile(res, status, file, ext);
       });
     }
   }).listen(parseInt(port, 10));
