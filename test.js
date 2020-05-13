@@ -21,7 +21,7 @@ const test = (cmd) => (url) => async (expect) => {
   );
 
   // Run the command and wait for the server to start
-  const [c, ...a] = ('node cli test ' + cmd).trim().split(' ');
+  const [c, ...a] = ('node cli example ' + cmd).trim().split(' ');
   const servor = cp.spawn(c, a);
   const { origin } = await new Promise((resolve) =>
     servor.stdout.once('data', (out) => {
@@ -49,9 +49,9 @@ const test = (cmd) => (url) => async (expect) => {
   // Change a file to trigger reload
   let reload = false;
   if (cmd.includes('--reload')) {
-    modifyFile('test/index.html');
+    modifyFile('example/index.html');
     reload = await page.waitForNavigation({ timeout: 1000 }).catch(() => false);
-    modifyFile('test/assets/index.js');
+    modifyFile('example/assets/index.js');
     reload = await page.waitForNavigation({ timeout: 1000 }).catch(() => false);
   }
 
