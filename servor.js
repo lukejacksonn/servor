@@ -10,25 +10,20 @@ const zlib = require('zlib');
 const cwd = process.cwd();
 
 const watch =
-  process.platform === 'linux'
-    ? (path, cb) => {
-        if (fs.statSync(path).isDirectory()) {
-          fs.watch(path, cb);
-          fs.readdirSync(path).forEach((entry) =>
-            watch(`${path}/${entry}`, cb)
-          );
+  process.platform !== 'linux'
+    ? (x, cb) => fs.watch(x, { recursive: true }, cb)
+    : (x, cb) => {
+        if (fs.statSync(x).isDirectory()) {
+          fs.watch(x, cb);
+          fs.readdirSync(x).forEach((xx) => watch(`${x}/${xx}`, cb));
         }
-      }
-    : (path, cb) => fs.watch(path, { recursive: true }, cb);
+      };
 
-const fport = (p = 0) =>
-  new Promise((resolve, reject) => {
+const freePort = (port = 0) =>
+  new Promise((ok, x) => {
     const s = net.createServer();
-    s.on('error', reject);
-    s.listen(p, () => {
-      const { port } = s.address();
-      s.close(() => resolve(port));
-    });
+    s.on('error', x);
+    s.listen(port, () => (a = s.address()) && s.close(() => ok(a.port)));
   });
 
 const ips = Object.values(os.networkInterfaces())
@@ -52,22 +47,22 @@ module.exports = async ({
   inject = '',
   credentials,
 } = {}) => {
-  // Try start on specified port or find a free one
+  // Try start on specified port then fail or find a free port
 
   try {
-    port = await fport(port || process.env.PORT || 8080);
+    port = await freePort(port || process.env.PORT || 8080);
   } catch (e) {
     if (port || process.env.PORT) {
       console.log('[ERR] The port you have specified is already in use!');
       process.exit();
     }
-    port = await fport();
+    port = await freePort();
   }
 
   // Configure globals
 
   root = root.startsWith('/') ? root : path.join(cwd, root);
-  const clients = [];
+  const reloadClients = [];
   const protocol = credentials ? 'https' : 'http';
   const server = credentials
     ? reload
@@ -89,10 +84,11 @@ module.exports = async ({
 
   // Server utility functions
 
+  const isRouteRequest = (pathname) => !~pathname.split('/').pop().indexOf('.');
   const utf8 = (file) => Buffer.from(file, 'binary').toString('utf8');
 
   const sendError = (res, status) => {
-    res.writeHead(status, { 'Access-Control-Allow-Origin': '*' });
+    res.writeHead(status);
     res.write(`${status}`);
     res.end();
   };
@@ -106,7 +102,6 @@ module.exports = async ({
     }
     res.writeHead(status, {
       'Content-Type': mimes[ext] || 'application/octet-stream',
-      'Access-Control-Allow-Origin': '*',
     });
     res.write(file, encoding);
     res.end();
@@ -117,68 +112,64 @@ module.exports = async ({
     res.write('\n\n');
   };
 
-  const indexFileExists = (pathname) =>
-    fs.existsSync(`${root}${pathname}/${fallback}`);
-
-  const isRouteRequest = (pathname) => !~pathname.split('/').pop().indexOf('.');
-
-  const registerClient = (res) => {
+  const serveReload = (res) => {
     res.writeHead(200, {
       Connection: 'keep-alive',
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': '*',
     });
     sendMessage(res, 'connected', 'ready');
     setInterval(sendMessage, 60000, res, 'ping', 'waiting');
-    clients.push(res);
+    reloadClients.push(res);
+  };
+
+  const serveStaticFile = (res, pathname) => {
+    const uri = path.join(root, pathname);
+    let ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
+    if (!fs.existsSync(uri)) return sendError(res, 404);
+    fs.readFile(uri, 'binary', (err, file) =>
+      err ? sendError(res, 500) : sendFile(res, 200, file, ext)
+    );
+  };
+
+  const serveRoute = (res, pathname) => {
+    const uri = routes
+      ? path.join(root, pathname, fallback)
+      : path.join(root, fallback);
+    if (!fs.existsSync(uri)) return sendError(res, 404);
+    fs.readFile(uri, 'binary', (err, file) => {
+      if (err) return sendError(res, 500);
+      const status = pathname === '/' || routes ? 200 : 301;
+      const base = path.join('/', pathname, '/');
+      const doc = `<!doctype html><meta charset="utf-8"/><base href="${base}"/>`;
+      if (module) file = `<script type='module'>${file}</script>`;
+      file = doc + file + inject + livereload;
+      sendFile(res, status, file, 'html');
+    });
   };
 
   // Start the server on the desired port
 
   server((req, res) => {
-    const pathname = url.parse(req.url).pathname;
-    if (reload && pathname === '/livereload') registerClient(res);
-    else {
-      const isRoute = isRouteRequest(pathname);
-      const hasIndex = isRoute && routes && indexFileExists(pathname);
-      const status = !isRoute || hasIndex || pathname === '/' ? 200 : 301;
-      console.log(status, pathname, !isRoute || hasIndex || pathname === '/');
-
-      const resource = isRoute
-        ? hasIndex
-          ? `/${decodeURI(pathname)}/${fallback}`
-          : `/${fallback}`
-        : decodeURI(pathname);
-      const uri = path.join(root, resource);
-      let ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
-      if (!fs.existsSync(uri)) return sendError(res, 404);
-      fs.readFile(uri, 'binary', (err, file) => {
-        if (err) return sendError(res, 500);
-        if (isRoute) {
-          const base = path.join('/', pathname, '/');
-          const doc = `<!doctype html><meta charset="utf-8"/><base href="${base}"/>`;
-          if (module) file = `<script type='module'>${file}</script>`;
-          file = doc + file + inject + livereload;
-          ext = 'html';
-        }
-        sendFile(res, status, file, ext);
-      });
-    }
+    const pathname = decodeURI(url.parse(req.url).pathname);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    if (reload && pathname === '/livereload') return serveReload(res);
+    if (!isRouteRequest(pathname)) return serveStaticFile(res, pathname);
+    return serveRoute(res, pathname);
   }).listen(parseInt(port, 10));
 
-  // Notify livereload clients on file change
+  // Notify livereload reloadClients on file change
 
   reload &&
     watch(root, () => {
-      while (clients.length > 0)
-        sendMessage(clients.pop(), 'message', 'reload');
+      while (reloadClients.length > 0)
+        sendMessage(reloadClients.pop(), 'message', 'reload');
     });
 
   // Close socket connections on sigint
 
   process.on('SIGINT', () => {
-    while (clients.length > 0) clients.pop().end();
+    while (reloadClients.length > 0) reloadClients.pop().end();
     process.exit();
   });
 

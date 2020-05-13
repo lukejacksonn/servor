@@ -9,16 +9,25 @@ const matches = (obj, source) =>
       JSON.stringify(obj[key]) === JSON.stringify(source[key])
   );
 
-const test = (cmd) => (url) => (expect) => async () => {
+const modifyFile = (x) =>
+  fs.readFile(x, 'utf-8', (_, data) => {
+    fs.writeFileSync(x, data, 'utf-8');
+  });
+
+const test = (cmd) => (url) => async (expect) => {
   // Make sure nothing is running on port 8080
   cp.execSync(
     "lsof -n -i4TCP:8080 | grep LISTEN | awk '{ print $2 }' | xargs kill"
   );
 
   // Run the command and wait for the server to start
-  const [c, ...a] = cmd.split(' ');
+  const [c, ...a] = ('node cli test ' + cmd).trim().split(' ');
   const servor = cp.spawn(c, a);
-  await new Promise((resolve) => servor.stdout.on('data', resolve));
+  const { origin } = await new Promise((resolve) =>
+    servor.stdout.once('data', (out) => {
+      resolve(new URL(out.toString().match(/Local:\t(.*)\n/)[1]));
+    })
+  );
 
   const browser = await puppeteer.launch({
     ignoreHTTPSErrors: true,
@@ -30,7 +39,7 @@ const test = (cmd) => (url) => (expect) => async () => {
   const page = await browser.newPage();
   await page.setCacheEnabled(false);
 
-  const res = await page.goto(url);
+  const res = await page.goto(`${origin}${url}`);
 
   // Collect data from response and page
   const status = res.status();
@@ -40,9 +49,9 @@ const test = (cmd) => (url) => (expect) => async () => {
   // Change a file to trigger reload
   let reload = false;
   if (cmd.includes('--reload')) {
-    fs.readFile('test/index.html', 'utf-8', (_, data) => {
-      fs.writeFileSync('test/index.html', data, 'utf-8');
-    });
+    modifyFile('test/index.html');
+    reload = await page.waitForNavigation({ timeout: 1000 }).catch(() => false);
+    modifyFile('test/assets/index.js');
     reload = await page.waitForNavigation({ timeout: 1000 }).catch(() => false);
   }
 
@@ -73,67 +82,89 @@ const test = (cmd) => (url) => (expect) => async () => {
 (async () => {
   const base = { status: 200, gzip: true, cors: true, reload: false };
 
-  await test('node cli test')('http://localhost:8080')({
+  await test('')('/')({
     ...base,
     includes: ['SERVOR_TEST_INDEX'],
-  })();
+  });
 
-  await test('node cli test')('http://localhost:8080/nested')({
+  await test('')('/index.html')({
     ...base,
-    status: 301,
     includes: ['SERVOR_TEST_INDEX'],
-  })();
+  });
 
-  await test('node cli test')('http://localhost:8080/assets/exists.png')({
+  await test('')('/assets/file with space.html')({
+    ...base,
+  });
+
+  await test('')('/assets/exists.png')({
     ...base,
     gzip: false,
-  })();
+  });
 
-  await test('node cli test')('http://localhost:8080/assets/no-exists.png')({
+  await test('')('/assets/no-exists.png')({
     ...base,
     status: 404,
     gzip: false,
-  })();
+  });
 
-  await test('node cli test --reload')('http://localhost:8080')({
+  await test('')('/nested')({
+    ...base,
+    status: 301,
+    includes: ['SERVOR_TEST_INDEX'],
+  });
+
+  await test('')('/nested/assets/exists.png')({
+    ...base,
+    gzip: false,
+  });
+
+  await test('')('/nested/assets/no-xists.png')({
+    ...base,
+    status: 404,
+    gzip: false,
+  });
+
+  await test('--reload')('/')({
     ...base,
     reload: true,
     includes: ['SERVOR_TEST_INDEX'],
-  })();
+  });
 
-  await test('node cli test --routes')('http://localhost:8080')({
+  await test('--routes')('/')({
     ...base,
     includes: ['SERVOR_TEST_INDEX'],
-  })();
+  });
 
-  await test('node cli test --routes')('http://localhost:8080/nested')({
+  await test('--routes')('/nested')({
     ...base,
     includes: ['SERVOR_TEST_NESTED_INDEX'],
-  })();
+  });
 
-  await test('node cli test --module')('http://localhost:8080')({
+  await test('--routes')('/broken-nested')({
+    ...base,
+    status: 404,
+    gzip: false,
+  });
+
+  await test('--module')('/')({
     ...base,
     includes: ['SERVOR_TEST_MODULE_INDEX'],
-  })();
+  });
 
-  await test('node cli test --secure')('https://localhost:8080')({
+  await test('--secure')('/')({
     ...base,
     includes: ['SERVOR_TEST_INDEX'],
-  })();
+  });
 
-  await test('node cli test --secure --reload --routes --module')(
-    'https://localhost:8080'
-  )({
+  await test('--secure --reload --routes --module')('/')({
     ...base,
     reload: true,
     includes: ['SERVOR_TEST_MODULE_INDEX'],
-  })();
+  });
 
-  await test('node cli test --secure --reload --routes --module')(
-    'https://localhost:8080/nested'
-  )({
+  await test('--secure --reload --routes --module')('/nested')({
     ...base,
     reload: true,
     includes: ['SERVOR_TEST_NESTED_MODULE_INDEX'],
-  })();
+  });
 })();
