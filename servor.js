@@ -4,35 +4,12 @@ const path = require('path');
 const http = require('http');
 const http2 = require('http2');
 const https = require('https');
-const os = require('os');
-const net = require('net');
 const zlib = require('zlib');
-const cwd = process.cwd();
 
-const mimeTypes = require('./config/mimeTypes.js');
-const directoryListing = require('./config/directoryListing.js');
+const mimeTypes = require('./utils/mimeTypes.js');
+const directoryListing = require('./utils/directoryListing.js');
 
-const watch =
-  process.platform !== 'linux'
-    ? (x, cb) => fs.watch(x, { recursive: true }, cb)
-    : (x, cb) => {
-        if (fs.statSync(x).isDirectory()) {
-          fs.watch(x, cb);
-          fs.readdirSync(x).forEach((xx) => watch(`${x}/${xx}`, cb));
-        }
-      };
-
-const freePort = (port = 0) =>
-  new Promise((ok, x) => {
-    const s = net.createServer();
-    s.on('error', x);
-    s.listen(port, () => (a = s.address()) && s.close(() => ok(a.port)));
-  });
-
-const ips = Object.values(os.networkInterfaces())
-  .reduce((every, i) => [...every, ...i], [])
-  .filter((i) => i.family === 'IPv4' && i.internal === false)
-  .map((i) => i.address);
+const { fileWatch, usePort, networkIps } = require('./utils/common.js');
 
 module.exports = async ({
   root = '.',
@@ -47,18 +24,19 @@ module.exports = async ({
   // Try start on specified port then fail or find a free port
 
   try {
-    port = await freePort(port || process.env.PORT || 8080);
+    port = await usePort(port || process.env.PORT || 8080);
   } catch (e) {
     if (port || process.env.PORT) {
       console.log('[ERR] The port you have specified is already in use!');
       process.exit();
     }
-    port = await freePort();
+    port = await usePort();
   }
 
   // Configure globals
 
-  root = root.startsWith('/') ? root : path.join(cwd, root);
+  root = root.startsWith('/') ? root : path.join(process.cwd(), root);
+
   const reloadClients = [];
   const protocol = credentials ? 'https' : 'http';
   const server = credentials
@@ -69,20 +47,23 @@ module.exports = async ({
 
   const livereload = reload
     ? `
-    <script>
-      const source = new EventSource('/livereload');
-      const reload = () => location.reload(true);
-      source.onmessage = reload;
-      source.onerror = () => (source.onopen = reload);
-      console.log('[servor] listening for file changes');
-    </script>
-  `
+      <script>
+        const source = new EventSource('/livereload');
+        const reload = () => location.reload(true);
+        source.onmessage = reload;
+        source.onerror = () => (source.onopen = reload);
+        console.log('[servor] listening for file changes');
+      </script>
+    `
     : '';
 
   // Server utility functions
 
   const isRouteRequest = (pathname) => !~pathname.split('/').pop().indexOf('.');
   const utf8 = (file) => Buffer.from(file, 'binary').toString('utf8');
+
+  const baseDoc = (pathname = '', base = path.join('/', pathname, '/')) =>
+    `<!doctype html><meta charset="utf-8"/><base href="${base}"/>`;
 
   const sendError = (res, status) => {
     res.writeHead(status);
@@ -92,13 +73,11 @@ module.exports = async ({
 
   const sendFile = (res, status, file, ext, encoding = 'binary') => {
     if (['js', 'css', 'html', 'json', 'xml', 'svg'].includes(ext)) {
-      res.setHeader('Content-Encoding', 'gzip');
+      res.setHeader('content-encoding', 'gzip');
       file = zlib.gzipSync(utf8(file));
       encoding = 'utf8';
     }
-    res.writeHead(status, {
-      'Content-Type': mimeTypes[ext] || 'application/octet-stream',
-    });
+    res.writeHead(status, { 'content-type': mimeTypes(ext) });
     res.write(file, encoding);
     res.end();
   };
@@ -110,9 +89,9 @@ module.exports = async ({
 
   const serveReload = (res) => {
     res.writeHead(200, {
-      Connection: 'keep-alive',
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      connection: 'keep-alive',
+      'content-type': 'text/event-stream',
+      'cache-control': 'no-cache',
     });
     sendMessage(res, 'connected', 'ready');
     setInterval(sendMessage, 60000, res, 'ping', 'waiting');
@@ -133,17 +112,16 @@ module.exports = async ({
   // Respond to requests without a file extension
 
   const serveRoute = (res, pathname) => {
-    const uri = routes
+    const index = routes
       ? path.join(root, pathname, fallback)
       : path.join(root, fallback);
-    if (!fs.existsSync(uri)) return serveDirectoryListing(res, pathname);
-    fs.readFile(uri, 'binary', (err, file) => {
+    if (!fs.existsSync(index) || (pathname.endsWith('/') && pathname !== '/'))
+      return serveDirectoryListing(res, pathname);
+    fs.readFile(index, 'binary', (err, file) => {
       if (err) return sendError(res, 500);
       const status = pathname === '/' || routes ? 200 : 301;
-      const base = path.join('/', pathname, '/');
-      const doc = `<!doctype html><meta charset="utf-8"/><base href="${base}"/>`;
       if (module) file = `<script type='module'>${file}</script>`;
-      file = doc + file + inject + livereload;
+      file = baseDoc(pathname) + file + inject + livereload;
       sendFile(res, status, file, 'html');
     });
   };
@@ -152,30 +130,26 @@ module.exports = async ({
 
   const serveDirectoryListing = (res, pathname) => {
     const uri = path.join(root, pathname);
-    const base = path.join('/', pathname, '/');
-    const doc = `<!doctype html><meta charset="utf-8"/><base href="${base}"/>`;
     if (!fs.existsSync(uri)) return sendError(res, 404);
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.write(doc + directoryListing(uri) + livereload);
+    res.write(baseDoc(pathname) + directoryListing(uri) + livereload);
     res.end();
   };
 
-  // Start the server on the desired port
+  // Start the server and route requests
 
   server((req, res) => {
     const pathname = decodeURI(url.parse(req.url).pathname);
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('access-control-allow-origin', '*');
     if (reload && pathname === '/livereload') return serveReload(res);
     if (!isRouteRequest(pathname)) return serveStaticFile(res, pathname);
-    if (pathname !== '/' && pathname.endsWith('/'))
-      return serveDirectoryListing(res, pathname);
     return serveRoute(res, pathname);
   }).listen(parseInt(port, 10));
 
   // Notify livereload reloadClients on file change
 
   reload &&
-    watch(root, () => {
+    fileWatch(root, () => {
       while (reloadClients.length > 0)
         sendMessage(reloadClients.pop(), 'message', 'reload');
     });
@@ -188,5 +162,5 @@ module.exports = async ({
   });
 
   const x = { url: `${protocol}://localhost:${port}` };
-  return { ...x, root, protocol, port, ips };
+  return { ...x, root, protocol, port, ips: networkIps };
 };
