@@ -9,7 +9,8 @@ const net = require('net');
 const zlib = require('zlib');
 const cwd = process.cwd();
 
-const mime = require('./config/mimetypes.js');
+const mimeTypes = require('./config/mimeTypes.js');
+const directoryListing = require('./config/directoryListing.js');
 
 const watch =
   process.platform !== 'linux'
@@ -96,7 +97,7 @@ module.exports = async ({
       encoding = 'utf8';
     }
     res.writeHead(status, {
-      'Content-Type': mime[ext] || 'application/octet-stream',
+      'Content-Type': mimeTypes[ext] || 'application/octet-stream',
     });
     res.write(file, encoding);
     res.end();
@@ -135,7 +136,7 @@ module.exports = async ({
     const uri = routes
       ? path.join(root, pathname, fallback)
       : path.join(root, fallback);
-    if (!fs.existsSync(uri)) return sendError(res, 404);
+    if (!fs.existsSync(uri)) return serveDirectoryListing(res, pathname);
     fs.readFile(uri, 'binary', (err, file) => {
       if (err) return sendError(res, 500);
       const status = pathname === '/' || routes ? 200 : 301;
@@ -147,6 +148,18 @@ module.exports = async ({
     });
   };
 
+  // Respond to requests with a trailing slash
+
+  const serveDirectoryListing = (res, pathname) => {
+    const uri = path.join(root, pathname);
+    const base = path.join('/', pathname, '/');
+    const doc = `<!doctype html><meta charset="utf-8"/><base href="${base}"/>`;
+    if (!fs.existsSync(uri)) return sendError(res, 404);
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.write(doc + directoryListing(uri) + livereload);
+    res.end();
+  };
+
   // Start the server on the desired port
 
   server((req, res) => {
@@ -154,6 +167,8 @@ module.exports = async ({
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (reload && pathname === '/livereload') return serveReload(res);
     if (!isRouteRequest(pathname)) return serveStaticFile(res, pathname);
+    if (pathname !== '/' && pathname.endsWith('/'))
+      return serveDirectoryListing(res, pathname);
     return serveRoute(res, pathname);
   }).listen(parseInt(port, 10));
 

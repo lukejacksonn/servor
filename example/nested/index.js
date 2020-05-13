@@ -1,6 +1,9 @@
 /* SERVOR_TEST_NESTED_MODULE_INDEX */
 
 import { react, html, css } from 'https://unpkg.com/rplus';
+import component from './component.js';
+
+console.log(component);
 
 const style = css`
   font-family: 'Roboto', sans-serif;
