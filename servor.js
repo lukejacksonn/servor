@@ -9,6 +9,8 @@ const net = require('net');
 const zlib = require('zlib');
 const cwd = process.cwd();
 
+const mime = require('./config/mimetypes.js');
+
 const watch =
   process.platform !== 'linux'
     ? (x, cb) => fs.watch(x, { recursive: true }, cb)
@@ -30,12 +32,6 @@ const ips = Object.values(os.networkInterfaces())
   .reduce((every, i) => [...every, ...i], [])
   .filter((i) => i.family === 'IPv4' && i.internal === false)
   .map((i) => i.address);
-
-const mimes = Object.entries(require('./types.json')).reduce(
-  (all, [type, exts]) =>
-    Object.assign(all, ...exts.map((ext) => ({ [ext]: type }))),
-  {}
-);
 
 module.exports = async ({
   root = '.',
@@ -95,13 +91,12 @@ module.exports = async ({
 
   const sendFile = (res, status, file, ext, encoding = 'binary') => {
     if (['js', 'css', 'html', 'json', 'xml', 'svg'].includes(ext)) {
-      res.removeHeader('Content-Length');
       res.setHeader('Content-Encoding', 'gzip');
       file = zlib.gzipSync(utf8(file));
       encoding = 'utf8';
     }
     res.writeHead(status, {
-      'Content-Type': mimes[ext] || 'application/octet-stream',
+      'Content-Type': mime[ext] || 'application/octet-stream',
     });
     res.write(file, encoding);
     res.end();
@@ -123,6 +118,8 @@ module.exports = async ({
     reloadClients.push(res);
   };
 
+  // Respond to requests with a file extension
+
   const serveStaticFile = (res, pathname) => {
     const uri = path.join(root, pathname);
     let ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
@@ -131,6 +128,8 @@ module.exports = async ({
       err ? sendError(res, 500) : sendFile(res, 200, file, ext)
     );
   };
+
+  // Respond to requests without a file extension
 
   const serveRoute = (res, pathname) => {
     const uri = routes
@@ -173,11 +172,6 @@ module.exports = async ({
     process.exit();
   });
 
-  return {
-    url: `${protocol}://localhost:${port}`,
-    root,
-    protocol,
-    port,
-    ips,
-  };
+  const x = { url: `${protocol}://localhost:${port}` };
+  return { ...x, root, protocol, port, ips };
 };
