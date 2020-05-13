@@ -899,8 +899,10 @@ const types = {
   'x-conference/x-cooltalk': ['ice'],
 };
 
-module.exports = Object.entries(types).reduce(
+const mimes = Object.entries(types).reduce(
   (all, [type, exts]) =>
     Object.assign(all, ...exts.map((ext) => ({ [ext]: type }))),
   {}
 );
+
+module.exports = (ext) => mimes[ext] || 'application/octet-stream';
