@@ -8,15 +8,15 @@
     "servor": "./cli.js"
   },
   "keywords": [
-    "development",
     "server",
-    "node",
-    "spa",
-    "reload"
+    "https",
+    "livereload",
+    "spa"
   ],
   "scripts": {
+    "start": "sudo node cli tests/example --reload --browse --secure --routes --module",
     "cleanup": "rm -f servor.key servor.crt",
-    "test": "npm run cleanup && node test.js"
+    "test": "npm run cleanup && cd tests && node index.js"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
   "license": "MIT",

@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const puppeteer = require('puppeteer');
 const cp = require('child_process');
 
@@ -21,7 +22,7 @@ const test = (cmd) => (url) => async (expect) => {
   );
 
   // Run the command and wait for the server to start
-  const [c, ...a] = ('node cli example ' + cmd).trim().split(' ');
+  const [c, ...a] = ('node ../cli example ' + cmd).trim().split(' ');
   const servor = cp.spawn(c, a);
   const { origin } = await new Promise((resolve) =>
     servor.stdout.once('data', (out) => {
