@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs');
 const servor = require('./servor.js');
+const openBrowser = require('./utils/openBrowser.js');
 
 const readCredentials = () => ({
   cert: fs.readFileSync(__dirname + '/servor.crt'),
@@ -30,7 +31,8 @@ const open =
     if (!fs.existsSync(dest)) {
       try {
         require('child_process').execSync(
-          `git clone https://github.com/${repo}`
+          `git clone https://github.com/${repo}`,
+          { stdio: 'ignore' }
         );
       } catch (e) {
         console.log('\n  ⚠️ Could not clone from https://github.com/', repo);
@@ -91,6 +93,5 @@ const open =
 
   // Browser the server index
 
-  !!~process.argv.indexOf('--browse') &&
-    require('child_process').execSync(`${open} ${url}`);
+  !!~process.argv.indexOf('--browse') && openBrowser(url);
 })();
