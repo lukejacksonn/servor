@@ -2,6 +2,8 @@
 
 import { react, html, css } from 'https://unpkg.com/rplus';
 
+document.title = 'SERVOR_TEST_MODULE_INDEX';
+
 const style = css`
   font-family: 'Roboto', sans-serif;
   font-size: 16px;

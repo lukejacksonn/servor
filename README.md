@@ -12,7 +12,7 @@ Servør can be invoked via the command line or programmatically using the node A
 
 ## Features
 
-The motivation here was to write a package from the ground up with no dependencies; using only native node and browser APIs to do a specific task with minimal code.
+The motivation here was to write a package from the ground up with no dependencies; using only native, node and browser APIs to do some specific tasks with minimal code.
 
 - 🗂 Serves static content like scripts, styles, images from a given directory
 - ♻️ Reloads the browser when project files get added, removed or modified
@@ -21,6 +21,8 @@ The motivation here was to write a package from the ground up with no dependenci
 - 🖥 Redirects all path requests to a single file for frontend routing
 - 📦 Accepts both HTML and JavaScript files as the root file for a directory
 - 🔎 Discovers freely available ports to start on by default
+- 📄 Renders directory listing for urls ending with a trailing slash
+- 🗃 Opens browser tab and code editor to streamline quick start
 
 ## CLI Usage
 
@@ -29,6 +31,8 @@ Run as a terminal command without adding it as a dependency using `npx`:
 ```s
 npx servor <root> <fallback> <port>
 ```
+
+> You can pass a GitHub repo as `<root>` using the syntax `gh:<user>/<repository>`
 
 - `<root>` path to serve static files from (defaults to current directory `.`)
 - `<fallback>` the file served for all non-file requests (defaults to `index.html`)
@@ -41,6 +45,8 @@ Optional flags passed as non-positional arguments:
 - `--secure` starts the server with https using generated credentials
 - `--silent` prevents the server node process from logging to stdout
 - `--module` causes the server to wrap the root in script type module tags
+- `--routes` causes the server to route nested index files if they exist
+- `--editor` causes a code editor to be opened at the project root
 
 Example usage with npm scripts in a `package.json` file after running `npm i servor -D`:
 
@@ -88,10 +94,12 @@ const servor = require('servor');
 const instance = await servor({
   root: '.',
   fallback: 'index.html',
-  port: 8080,
+  module: false,
+  routes: false,
   reload: false,
   inject: ''
-  credentials: {},
+  credentials: null,
+  port: 8080,
 });
 ```
 

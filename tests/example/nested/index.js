@@ -3,6 +3,8 @@
 import { react, html, css } from 'https://unpkg.com/rplus';
 import component from './component.js';
 
+document.title = 'SERVOR_TEST_NESTED_MODULE_INDEX';
+
 console.log(component);
 
 const style = css`
