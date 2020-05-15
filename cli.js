@@ -25,7 +25,7 @@ const open =
   const admin = process.getuid && process.getuid() === 0;
   let credentials;
 
-  if (args[0].startsWith('gh:')) {
+  if (args[0] && args[0].startsWith('gh:')) {
     const repo = args[0].replace('gh:', '');
     const dest = repo.split('/')[1];
     if (!fs.existsSync(dest)) {
@@ -35,7 +35,9 @@ const open =
           { stdio: 'ignore' }
         );
       } catch (e) {
-        console.log('\n  ⚠️ Could not clone from https://github.com/', repo);
+        console.log(
+          `\n  ⚠️  Could not clone from https://github.com/${repo}\n`
+        );
         process.exit();
       }
     }
@@ -46,7 +48,7 @@ const open =
     try {
       require('child_process').execSync(`code ${args[0]}`);
     } catch (e) {
-      console.log(`\n  ⚠️ Could not open code editor for ${args[0]}`);
+      console.log(`\n  ⚠️  Could not open code editor for ${args[0]}`);
     }
   }
 
@@ -63,7 +65,7 @@ const open =
         credentials = readCredentials();
       } catch (e) {
         console.log(
-          ' ⚠️ There was a problem generating ssl credentials. Try removing `--secure`'
+          '\n  ⚠️  There was a problem generating ssl credentials. Try removing `--secure`\n'
         );
         process.exit();
       }
