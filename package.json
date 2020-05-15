@@ -14,7 +14,7 @@
     "spa"
   ],
   "scripts": {
-    "start": "sudo node cli tests/example --reload --browse --secure --routes --module",
+    "start": "sudo node cli tests/example --reload --browse --secure --static --module",
     "cleanup": "rm -f servor.key servor.crt",
     "test": "npm run cleanup && cd tests && node index.js"
   },

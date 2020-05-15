@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 const puppeteer = require('puppeteer');
 const cp = require('child_process');
 
@@ -131,17 +130,17 @@ const test = (cmd) => (url) => async (expect) => {
     includes: ['SERVOR_TEST_INDEX'],
   });
 
-  await test('--routes')('/')({
+  await test('--static')('/')({
     ...base,
     includes: ['SERVOR_TEST_INDEX'],
   });
 
-  await test('--routes')('/nested')({
+  await test('--static')('/nested')({
     ...base,
     includes: ['SERVOR_TEST_NESTED_INDEX'],
   });
 
-  await test('--routes')('/broken-nested')({
+  await test('--static')('/broken-nested')({
     ...base,
     status: 404,
     gzip: false,
@@ -157,13 +156,13 @@ const test = (cmd) => (url) => async (expect) => {
     includes: ['SERVOR_TEST_INDEX'],
   });
 
-  await test('--secure --reload --routes --module')('/')({
+  await test('--secure --reload --static --module')('/')({
     ...base,
     reload: true,
     includes: ['SERVOR_TEST_MODULE_INDEX'],
   });
 
-  await test('--secure --reload --routes --module')('/nested')({
+  await test('--secure --reload --static --module')('/nested')({
     ...base,
     reload: true,
     includes: ['SERVOR_TEST_NESTED_MODULE_INDEX'],
