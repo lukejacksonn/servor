@@ -15,11 +15,11 @@ module.exports = async ({
   root = '.',
   module = false,
   fallback = module ? 'index.js' : 'index.html',
-  port,
   reload = true,
   routes = false,
   inject = '',
   credentials,
+  port,
 } = {}) => {
   // Try start on specified port then fail or find a free port
 
@@ -86,6 +86,8 @@ module.exports = async ({
     res.write(`event: ${channel}\nid: 0\ndata: ${data}\n`);
     res.write('\n\n');
   };
+
+  // Respond to reload requests with keep alive
 
   const serveReload = (res) => {
     res.writeHead(200, {

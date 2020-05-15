@@ -24,6 +24,30 @@ const open =
   const admin = process.getuid && process.getuid() === 0;
   let credentials;
 
+  if (args[0].startsWith('gh:')) {
+    const repo = args[0].replace('gh:', '');
+    const dest = repo.split('/')[1];
+    if (!fs.existsSync(dest)) {
+      try {
+        require('child_process').execSync(
+          `git clone https://github.com/${repo}`
+        );
+      } catch (e) {
+        console.log('\n  ⚠️ Could not clone from https://github.com/', repo);
+        process.exit();
+      }
+    }
+    args[0] = dest;
+  }
+
+  if (~process.argv.indexOf('--editor')) {
+    try {
+      require('child_process').execSync(`code ${args[0]}`);
+    } catch (e) {
+      console.log(`\n  ⚠️ Could not open code editor for ${args[0]}`);
+    }
+  }
+
   // Generate ssl certificates
 
   if (~process.argv.indexOf('--secure')) {
