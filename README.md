@@ -45,7 +45,7 @@ Optional flags passed as non-positional arguments:
 - `--secure` starts the server with https using generated credentials
 - `--silent` prevents the server node process from logging to stdout
 - `--module` causes the server to wrap the root in script type module tags
-- `--routes` causes the server to route nested index files if they exist
+- `--static` causes the server to route nested index files if they exist
 - `--editor` causes a code editor to be opened at the project root
 
 Example usage with npm scripts in a `package.json` file after running `npm i servor -D`:
@@ -95,7 +95,7 @@ const instance = await servor({
   root: '.',
   fallback: 'index.html',
   module: false,
-  routes: false,
+  static: false,
   reload: false,
   inject: ''
   credentials: null,

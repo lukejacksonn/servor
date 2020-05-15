@@ -16,7 +16,7 @@ module.exports = async ({
   module = false,
   fallback = module ? 'index.js' : 'index.html',
   reload = true,
-  routes = false,
+  static = false,
   inject = '',
   credentials,
   port,
@@ -114,14 +114,14 @@ module.exports = async ({
   // Respond to requests without a file extension
 
   const serveRoute = (res, pathname) => {
-    const index = routes
+    const index = static
       ? path.join(root, pathname, fallback)
       : path.join(root, fallback);
     if (!fs.existsSync(index) || (pathname.endsWith('/') && pathname !== '/'))
       return serveDirectoryListing(res, pathname);
     fs.readFile(index, 'binary', (err, file) => {
       if (err) return sendError(res, 500);
-      const status = pathname === '/' || routes ? 200 : 301;
+      const status = pathname === '/' || static ? 200 : 301;
       if (module) file = `<script type='module'>${file}</script>`;
       file = baseDoc(pathname) + file + inject + livereload;
       sendFile(res, status, file, 'html');
