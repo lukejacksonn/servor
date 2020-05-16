@@ -2,9 +2,19 @@
 
 > A dependency free dev server for modern web application development
 
-The new and enhanced version of [http-server-spa](https://npmjs.com/http-server-spa). A very compact but capable static file server with https, live reloading, gzip and other useful features to support web app development on localhost and over a local network.
+A very compact but capable static file server with https, live reloading, gzip and other useful features to support modern web app development on localhost and over a local network. The motivation here was to write a package from the ground up with no dependencies; using only native, node and browser APIs to do some specific tasks with minimal code.
 
 Servør can be invoked via the command line or programmatically using the node API.
+
+**Quickstart Example**
+
+The following command instructs servør to; clone [perflink](https://github.com/lukejacksonn/perflink), start a server at the project root, open the url in a browser, open the source code in an editor and reload the browser when files change.
+
+```s
+npx servor gh:lukejacksonn/perflink --browse --editor --reload
+```
+
+Most features are disabled by default but you can customize behaviour by passing positional arguments and flags to enable features.
 
 <hr>
 
@@ -12,15 +22,13 @@ Servør can be invoked via the command line or programmatically using the node A
 
 ## Features
 
-The motivation here was to write a package from the ground up with no dependencies; using only native, node and browser APIs to do some specific tasks with minimal code.
-
 - 🗂 Serves static content like scripts, styles, images from a given directory
 - ♻️ Reloads the browser when project files get added, removed or modified
 - 🗜 Uses gzip on common filetypes like html, css, js and json
 - 🔐 Supports https and http2 with trusted self signed certificates
 - 🖥 Redirects all path requests to a single file for frontend routing
 - 📦 Accepts both HTML and JavaScript files as the root file for a directory
-- 🔎 Discovers freely available ports to start on by default
+- 🔎 Discovers freely available ports to start if the default is in use
 - 📄 Renders directory listing for urls ending with a trailing slash
 - 🗃 Opens browser tab and code editor to streamline quick start
 
@@ -46,14 +54,14 @@ Optional flags passed as non-positional arguments:
 - `--silent` prevents the server node process from logging to stdout
 - `--module` causes the server to wrap the root in script type module tags
 - `--static` causes the server to route nested index files if they exist
-- `--editor` causes a code editor to be opened at the project root
+- `--editor` opens a code editor (currently only vscode) at the project root
 
 Example usage with npm scripts in a `package.json` file after running `npm i servor -D`:
 
 ```json
 {
   "devDependencies": {
-    "servor": "3.1.0"
+    "servor": "4.0.0"
   },
   "scripts": {
     "start": "servor www index.html 8080 --reload --browse"
