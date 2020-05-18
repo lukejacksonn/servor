@@ -1,6 +1,6 @@
 {
   "name": "servor",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "A dependency free dev server for single page app development",
   "repository": "lukejacksonn/servor",
   "main": "./servor.js",
