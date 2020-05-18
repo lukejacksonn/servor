@@ -46,9 +46,9 @@ const open =
 
   if (~process.argv.indexOf('--editor')) {
     try {
-      require('child_process').execSync(`code ${args[0]}`);
+      require('child_process').execSync(`code ${args[0] || '.'}`);
     } catch (e) {
-      console.log(`\n  ⚠️  Could not open code editor for ${args[0]}`);
+      console.log(`\n  ⚠️  Could not open code editor for ${args[0] || '.'}`);
     }
   }
 
