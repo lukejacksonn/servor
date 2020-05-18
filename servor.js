@@ -123,7 +123,8 @@ module.exports = async ({
       if (err) return sendError(res, 500);
       const status = pathname === '/' || static ? 200 : 301;
       if (module) file = `<script type='module'>${file}</script>`;
-      file = baseDoc(pathname) + file + inject + livereload;
+      if (static) file = baseDoc(pathname) + file;
+      file = file + inject + livereload;
       sendFile(res, status, file, 'html');
     });
   };
