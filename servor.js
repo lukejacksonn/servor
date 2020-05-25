@@ -141,7 +141,7 @@ module.exports = async ({
 
   // Start the server and route requests
 
-  server((req, res) => {
+  const serverInstance = server((req, res) => {
     const pathname = decodeURI(url.parse(req.url).pathname);
     res.setHeader('access-control-allow-origin', '*');
     if (reload && pathname === '/livereload') return serveReload(res);
@@ -165,5 +165,5 @@ module.exports = async ({
   });
 
   const x = { url: `${protocol}://localhost:${port}` };
-  return { ...x, root, protocol, port, ips: networkIps, server };
+  return { ...x, root, protocol, port, ips: networkIps, server: serverInstance };
 };
