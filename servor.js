@@ -165,5 +165,5 @@ module.exports = async ({
   });
 
   const x = { url: `${protocol}://localhost:${port}` };
-  return { ...x, root, protocol, port, ips: networkIps };
+  return { ...x, root, protocol, port, ips: networkIps, server };
 };
