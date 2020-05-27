@@ -13,6 +13,7 @@ const { fileWatch, usePort, networkIps } = require('./utils/common.js');
 
 module.exports = async ({
   root = '.',
+  watchRoot = root,
   module = false,
   fallback = module ? 'index.js' : 'index.html',
   reload = true,
@@ -36,6 +37,7 @@ module.exports = async ({
   // Configure globals
 
   root = root.startsWith('/') ? root : path.join(process.cwd(), root);
+  watchRoot = watchRoot.startsWith('/') ? watchRoot : path.join(process.cwd(), watchRoot);
 
   const reloadClients = [];
   const protocol = credentials ? 'https' : 'http';
@@ -152,7 +154,7 @@ module.exports = async ({
   // Notify livereload reloadClients on file change
 
   reload &&
-    fileWatch(root, () => {
+    fileWatch(watchRoot, () => {
       while (reloadClients.length > 0)
         sendMessage(reloadClients.pop(), 'message', 'reload');
     });
@@ -165,5 +167,5 @@ module.exports = async ({
   });
 
   const x = { url: `${protocol}://localhost:${port}` };
-  return { ...x, root, protocol, port, ips: networkIps };
+  return { ...x, root, watchRoot, protocol, port, ips: networkIps };
 };
