@@ -37,6 +37,16 @@ module.exports = async ({
 
   root = root.startsWith('/') ? root : path.join(process.cwd(), root);
 
+  if (!fs.existsSync(root)) {
+    console.log(`[ERR] Root directory ${root} does not exist!`);
+    process.exit();
+  }
+
+  if (!fs.statSync(root).isDirectory()) {
+    console.log(`[ERR] Root directory "${root}" is not directory!`);
+    process.exit();
+  }
+
   const reloadClients = [];
   const protocol = credentials ? 'https' : 'http';
   const server = credentials
