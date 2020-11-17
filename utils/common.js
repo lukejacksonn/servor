@@ -1,10 +1,35 @@
 const fs = require('fs');
 const os = require('os');
 const net = require('net');
+const path = require('path');
+
+// recursive function that checks if a file is still changing
+const awaitWriteFinish = (path, prev, cb) => {
+  fs.stat(path, { bigint: true }, (err, stat) => {
+    if (err) {
+      throw err;
+    }
+    if (stat.mtimeNs === prev.mtimeNs) {
+      cb();
+    } else {
+      setTimeout(awaitWriteFinish, 150, path, stat, cb);
+    }
+  });
+};
 
 const fileWatch =
   process.platform !== 'linux'
-    ? (x, cb) => fs.watch(x, { recursive: true }, cb)
+    ? (x, cb) =>
+        fs.watch(x, { recursive: true }, (_, filename) => {
+          const fileChanged = path.join(x, filename);
+          fs.stat(fileChanged, { bigint: true }, (err, stat) => {
+            if (err) {
+              throw err;
+            } else {
+              setTimeout(awaitWriteFinish, 150, fileChanged, stat, cb);
+            }
+          });
+        })
     : (x, cb) => {
         if (fs.statSync(x).isDirectory()) {
           fs.watch(x, cb);
