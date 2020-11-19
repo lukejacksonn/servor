@@ -22,13 +22,7 @@ const fileWatch =
     ? (x, cb) =>
         fs.watch(x, { recursive: true }, (_, filename) => {
           const fileChanged = path.join(x, filename);
-          fs.stat(fileChanged, { bigint: true }, (err, stat) => {
-            if (err) {
-              throw err;
-            } else {
-              setTimeout(awaitWriteFinish, 150, fileChanged, stat, cb);
-            }
-          });
+          awaitWriteFinish(fileChanged, {}, cb);
         })
     : (x, cb) => {
         if (fs.statSync(x).isDirectory()) {
