@@ -12,7 +12,7 @@ const awaitWriteFinish = (path, prev, cb) => {
     if (stat.mtimeNs === prev.mtimeNs) {
       cb();
     } else {
-      setTimeout(awaitWriteFinish, 150, path, stat, cb);
+      setTimeout(awaitWriteFinish, 50, path, stat, cb);
     }
   });
 };
