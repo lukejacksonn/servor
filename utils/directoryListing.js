@@ -10,14 +10,14 @@ module.exports = (uri) => {
       ? `
         <div>
           <span>🗂</span>
-          <a href=${`${x}/`}>${x}</a>
+          <a href="${`${x}/`}">${x}</a>
           <small>${size(x)}B</small>
         </div>
       `
       : `
         <div>
           <span>📄</span>
-          <a href=${x}>${x}</a>
+          <a href="${x}">${x}</a>
           <small>${size(x)}B</small>
         </div>
       `;
