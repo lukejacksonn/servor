@@ -106,9 +106,14 @@ module.exports = async ({
     const uri = path.join(root, pathname);
     let ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
     if (!fs.existsSync(uri)) return sendError(res, 404);
-    fs.readFile(uri, 'binary', (err, file) =>
-      err ? sendError(res, 500) : sendFile(res, 200, file, ext)
-    );
+    fs.readFile(uri, 'binary', (err, file) => {
+      if (err) return sendError(res, 500)
+
+      if (pathname.endsWith(".html"))
+        file = file + inject + livereload
+
+      sendFile(res, 200, file, ext)
+    });
   };
 
   // Respond to requests without a file extension
