@@ -21,6 +21,16 @@ const open =
     : 'xdg-open';
 
 (async () => {
+  // Merging --extern arguments with it's next value to avoid messing with positional values
+
+  for (let i = 0; i < process.argv.length; i++) {
+    const arg = process.argv[i]
+    if (arg === '--extern') {
+      process.argv[i] = arg + '=' + process.argv[i + 1]
+      process.argv.splice(i + 1, 1)
+    }
+  }
+
   const args = process.argv.slice(2).filter((x) => !~x.indexOf('--'));
   const admin = process.getuid && process.getuid() === 0;
   let credentials;
@@ -74,6 +84,10 @@ const open =
 
   // Parse arguments from the command line
 
+  const extern = process.argv
+    .filter((x) => x.indexOf('--extern') === 0)
+    .map((x) => x.split('=', 2)[1])
+
   const { root, protocol, port, ips, url } = await servor({
     root: args[0],
     fallback: args[1],
@@ -81,6 +95,7 @@ const open =
     reload: !!~process.argv.indexOf('--reload'),
     module: !!~process.argv.indexOf('--module'),
     static: !!~process.argv.indexOf('--static'),
+    extern,
     credentials,
   });
 
