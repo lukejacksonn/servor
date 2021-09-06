@@ -17,6 +17,7 @@ module.exports = async ({
   fallback = module ? 'index.js' : 'index.html',
   reload = true,
   static = false,
+  extern = [],
   inject = '',
   credentials,
   port,
@@ -35,16 +36,20 @@ module.exports = async ({
 
   // Configure globals
 
-  root = root.startsWith('/') ? root : path.join(process.cwd(), root);
+  const entrypoints = [root, ...extern];
 
-  if (!fs.existsSync(root)) {
-    console.log(`[ERR] Root directory ${root} does not exist!`);
-    process.exit();
-  }
+  for (const entrypoint of entrypoints) {
+    const root = entrypoint.startsWith('/') ? entrypoint : path.join(process.cwd(), entrypoint);
 
-  if (!fs.statSync(root).isDirectory()) {
-    console.log(`[ERR] Root directory "${root}" is not directory!`);
-    process.exit();
+    if (!fs.existsSync(root)) {
+      console.log(`[ERR] Root directory ${root} does not exist!`);
+      process.exit();
+    }
+
+    if (!fs.statSync(root).isDirectory()) {
+      console.log(`[ERR] Root directory "${root}" is not directory!`);
+      process.exit();
+    }
   }
 
   const reloadClients = [];
@@ -113,9 +118,9 @@ module.exports = async ({
   // Respond to requests with a file extension
 
   const serveStaticFile = (res, pathname) => {
-    const uri = path.join(root, pathname);
+    let uri = searchPath(pathname);
+    if (!uri) return sendError(res, 404);
     let ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
-    if (!fs.existsSync(uri)) return sendError(res, 404);
     fs.readFile(uri, 'binary', (err, file) =>
       err ? sendError(res, 500) : sendFile(res, 200, file, ext)
     );
@@ -125,9 +130,9 @@ module.exports = async ({
 
   const serveRoute = (res, pathname) => {
     const index = static
-      ? path.join(root, pathname, fallback)
-      : path.join(root, fallback);
-    if (!fs.existsSync(index) || (pathname.endsWith('/') && pathname !== '/'))
+      ? searchPath(pathname, fallback)
+      : searchPath(fallback);
+    if (!index || (pathname.endsWith('/') && pathname !== '/'))
       return serveDirectoryListing(res, pathname);
     fs.readFile(index, 'binary', (err, file) => {
       if (err) return sendError(res, 500);
@@ -142,12 +147,19 @@ module.exports = async ({
   // Respond to requests with a trailing slash
 
   const serveDirectoryListing = (res, pathname) => {
-    const uri = path.join(root, pathname);
+    const uri = searchPath(pathname);
     if (!fs.existsSync(uri)) return sendError(res, 404);
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.write(baseDoc(pathname) + directoryListing(uri) + livereload);
     res.end();
   };
+
+  const searchPath = (pathname, fallback = '') => {
+    for (const entrypoint of entrypoints) {
+      const uri = path.join(entrypoint, pathname, fallback);
+      if (fs.existsSync(uri)) return uri
+    }
+  }
 
   // Start the server and route requests
 
