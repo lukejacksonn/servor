@@ -70,6 +70,7 @@ module.exports = async ({
   // Server utility functions
 
   const isRouteRequest = (pathname) => !~pathname.split('/').pop().indexOf('.');
+  const isDir = (pathname) => fs.existsSync(pathname.split('/').pop()) && fs.lstatSync(pathname.split('/').pop()).isDirectory();
   const utf8 = (file) => Buffer.from(file, 'binary').toString('utf8');
 
   const baseDoc = (pathname = '', base = path.join('/', pathname, '/')) =>
@@ -156,6 +157,7 @@ module.exports = async ({
     const pathname = path.normalize(decodePathname).replace(/^(\.\.(\/|\\|$))+/, '');
     res.setHeader('access-control-allow-origin', '*');
     if (reload && pathname === '/livereload') return serveReload(res);
+    if (!isRouteRequest(pathname) && isDir(pathname)) return serveRoute(res, pathname);
     if (!isRouteRequest(pathname)) return serveStaticFile(res, pathname);
     return serveRoute(res, pathname);
   }).listen(parseInt(port, 10));
