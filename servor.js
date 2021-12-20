@@ -37,6 +37,16 @@ module.exports = async ({
 
   root = root.startsWith('/') ? root : path.join(process.cwd(), root);
 
+  if (!fs.existsSync(root)) {
+    console.log(`[ERR] Root directory ${root} does not exist!`);
+    process.exit();
+  }
+
+  if (!fs.statSync(root).isDirectory()) {
+    console.log(`[ERR] Root directory "${root}" is not directory!`);
+    process.exit();
+  }
+
   const reloadClients = [];
   const protocol = credentials ? 'https' : 'http';
   const server = credentials
@@ -147,7 +157,8 @@ module.exports = async ({
   // Start the server and route requests
 
   server((req, res) => {
-    const pathname = decodeURI(url.parse(req.url).pathname);
+    const decodePathname = decodeURI(url.parse(req.url).pathname);
+    const pathname = path.normalize(decodePathname).replace(/^(\.\.(\/|\\|$))+/, '');
     res.setHeader('access-control-allow-origin', '*');
     if (reload && pathname === '/livereload') return serveReload(res);
     if (!isRouteRequest(pathname)) return serveStaticFile(res, pathname);
