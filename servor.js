@@ -20,6 +20,7 @@ module.exports = async ({
   inject = '',
   credentials,
   port,
+  host
 } = {}) => {
   // Try start on specified port then fail or find a free port
 
