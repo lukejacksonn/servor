@@ -159,7 +159,7 @@ module.exports = async ({
     if (reload && pathname === '/livereload') return serveReload(res);
     if (!isRouteRequest(pathname)) return serveStaticFile(res, pathname);
     return serveRoute(res, pathname);
-  }).listen(parseInt(port, 10));
+  }).listen(parseInt(port, 10), host);
 
   // Notify livereload reloadClients on file change
 
