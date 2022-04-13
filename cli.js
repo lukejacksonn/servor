@@ -78,6 +78,7 @@ const open =
     root: args[0],
     fallback: args[1],
     port: args[2],
+    host: ( !!~process.argv.indexOf('--localhost-only') ) ? '127.0.0.1' : null,
     reload: !!~process.argv.indexOf('--reload'),
     module: !!~process.argv.indexOf('--module'),
     static: !!~process.argv.indexOf('--static'),
