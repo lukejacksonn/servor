@@ -19,7 +19,7 @@ fi
 
 # Generate Certificate Authority
 openssl genrsa -out "tmp/${name}CA.key" 2048 &>/dev/null
-openssl req -x509 -config utils/ca.conf -new -nodes -key "tmp/${name}CA.key" -sha256 -days 1825 -out "${name}CA.pem" &>/dev/null
+openssl req -x509 -config utils/ca.conf -new -nodes -key "tmp/${name}CA.key" -sha256 -days 825 -out "${name}CA.pem" &>/dev/null
 
 # This is the part that demands root privileges
 if [ "$EUID" -eq 0 ] ; then
@@ -36,7 +36,7 @@ openssl genrsa -out "${name}.key" 2048 &>/dev/null
 openssl req -new -config utils/ca.conf -key "${name}.key" -out "tmp/${name}.csr" &>/dev/null
 
 # Generate SSL Certificate
-openssl x509 -req -in "tmp/${name}.csr" -CA "${name}CA.pem" -CAkey "tmp/${name}CA.key" -CAcreateserial -out "${name}.crt" -days 1825 -sha256 -extfile utils/ssl.conf &>/dev/null
+openssl x509 -req -in "tmp/${name}.csr" -CA "${name}CA.pem" -CAkey "tmp/${name}CA.key" -CAcreateserial -out "${name}.crt" -days 825 -sha256 -extfile utils/ssl.conf &>/dev/null
 
 # Cleanup files
 rm servorCA.pem servorCA.srl
