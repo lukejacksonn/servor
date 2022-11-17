@@ -55,6 +55,7 @@ Optional flags passed as non-positional arguments:
 - `--module` causes the server to wrap the root in script type module tags
 - `--static` causes the server to route nested index files if they exist
 - `--editor` opens a code editor (currently only vscode) at the project root
+- `--trailing-slash` ignores trailing slash instead of loading directory
 
 Example usage with npm scripts in a `package.json` file after running `npm i servor -D`:
 

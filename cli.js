@@ -81,6 +81,7 @@ const open =
     reload: !!~process.argv.indexOf('--reload'),
     module: !!~process.argv.indexOf('--module'),
     static: !!~process.argv.indexOf('--static'),
+    trailingSlash: !!~process.argv.indexOf('--trailing-slash'), 
     credentials,
   });
 

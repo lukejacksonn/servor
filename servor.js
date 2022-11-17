@@ -18,6 +18,7 @@ module.exports = async ({
   reload = true,
   static = false,
   inject = '',
+  trailingSlash = false,
   credentials,
   port,
 } = {}) => {
@@ -127,7 +128,7 @@ module.exports = async ({
     const index = static
       ? path.join(root, pathname, fallback)
       : path.join(root, fallback);
-    if (!fs.existsSync(index) || (pathname.endsWith('/') && pathname !== '/'))
+    if (!fs.existsSync(index) || (pathname.endsWith('/') && pathname !== '/' && !trailingSlash))
       return serveDirectoryListing(res, pathname);
     fs.readFile(index, 'binary', (err, file) => {
       if (err) return sendError(res, 500);
