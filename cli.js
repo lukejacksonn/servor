@@ -81,6 +81,8 @@ const open =
     reload: !!~process.argv.indexOf('--reload'),
     module: !!~process.argv.indexOf('--module'),
     static: !!~process.argv.indexOf('--static'),
+    host: ( !!~process.argv.indexOf('--localhost-only') ) ? '127.0.0.1' : null,
+    noDirListing: !!~process.argv.indexOf('--no-dir-listing'), 
     credentials,
   });
 

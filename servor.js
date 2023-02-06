@@ -20,6 +20,10 @@ module.exports = async ({
   inject = '',
   credentials,
   port,
+  host = '127.0.0.1',
+  livereloadUrl = '/livereload',
+  proxy,
+  noDirListing = false,
 } = {}) => {
   // Try start on specified port then fail or find a free port
 
@@ -58,7 +62,7 @@ module.exports = async ({
   const livereload = reload
     ? `
       <script>
-        const source = new EventSource('/livereload');
+        const source = new EventSource('${livereloadUrl}');
         const reload = () => location.reload(true);
         source.onmessage = reload;
         source.onerror = () => (source.onopen = reload);
@@ -70,6 +74,7 @@ module.exports = async ({
   // Server utility functions
 
   const isRouteRequest = (pathname) => !~pathname.split('/').pop().indexOf('.');
+  const isDir = (pathname) => fs.existsSync(pathname.split('/').pop()) && fs.lstatSync(pathname.split('/').pop()).isDirectory();
   const utf8 = (file) => Buffer.from(file, 'binary').toString('utf8');
 
   const baseDoc = (pathname = '', base = path.join('/', pathname, '/')) =>
@@ -116,9 +121,14 @@ module.exports = async ({
     const uri = path.join(root, pathname);
     let ext = uri.replace(/^.*[\.\/\\]/, '').toLowerCase();
     if (!fs.existsSync(uri)) return sendError(res, 404);
-    fs.readFile(uri, 'binary', (err, file) =>
-      err ? sendError(res, 500) : sendFile(res, 200, file, ext)
-    );
+    fs.readFile(uri, 'binary', (err, file) => {
+      if (err) return sendError(res, 500)
+
+      if (pathname.endsWith(".html"))
+        file = file + inject + livereload
+
+      sendFile(res, 200, file, ext)
+    });
   };
 
   // Respond to requests without a file extension
@@ -127,7 +137,7 @@ module.exports = async ({
     const index = static
       ? path.join(root, pathname, fallback)
       : path.join(root, fallback);
-    if (!fs.existsSync(index) || (pathname.endsWith('/') && pathname !== '/'))
+    if ((!fs.existsSync(index) || (pathname.endsWith('/') && pathname !== '/')) && !noDirListing)
       return serveDirectoryListing(res, pathname);
     fs.readFile(index, 'binary', (err, file) => {
       if (err) return sendError(res, 500);
@@ -155,10 +165,10 @@ module.exports = async ({
     const decodePathname = decodeURI(url.parse(req.url).pathname);
     const pathname = path.normalize(decodePathname).replace(/^(\.\.(\/|\\|$))+/, '');
     res.setHeader('access-control-allow-origin', '*');
-    if (reload && pathname === '/livereload') return serveReload(res);
-    if (!isRouteRequest(pathname)) return serveStaticFile(res, pathname);
+    if (reload && pathname === livereloadUrl) return serveReload(res);
+    if (!isRouteRequest(pathname) && isDir(pathname)) return serveStaticFile(res, pathname);
     return serveRoute(res, pathname);
-  }).listen(parseInt(port, 10));
+  }).listen(parseInt(port, 10), host);
 
   // Notify livereload reloadClients on file change
 
