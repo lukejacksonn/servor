@@ -5,11 +5,13 @@ const http = require('http');
 const http2 = require('http2');
 const https = require('https');
 const zlib = require('zlib');
+const httpProxy = require('http-proxy')
 
 const mimeTypes = require('./utils/mimeTypes.js');
 const directoryListing = require('./utils/directoryListing.js');
 
 const { fileWatch, usePort, networkIps } = require('./utils/common.js');
+
 
 module.exports = async ({
   root = '.',
@@ -22,7 +24,7 @@ module.exports = async ({
   port,
   host = '127.0.0.1',
   livereloadUrl = '/livereload',
-  proxy,
+  proxy: proxyConfig,
   noDirListing = false,
 } = {}) => {
   // Try start on specified port then fail or find a free port
@@ -36,6 +38,10 @@ module.exports = async ({
     }
     port = await usePort();
   }
+
+  proxyConfig = proxyConfig ? Object.keys(proxyConfig).map(key => [new RegExp(key), proxyConfig[key]]) : null;
+
+  let proxy;
 
   // Configure globals
 
@@ -133,7 +139,13 @@ module.exports = async ({
 
   // Respond to requests without a file extension
 
-  const serveRoute = (res, pathname) => {
+  const serveRoute = (req, res, pathname) => {
+    for (let i = 0; i < proxyConfig.length; i++) {
+      const [key, value] = proxyConfig[i];
+      if (key.test(pathname) && proxy) {
+        return proxy.web(req, res, { target: value, changeOrigin: true });
+      }
+    }
     const index = static
       ? path.join(root, pathname, fallback)
       : path.join(root, fallback);
@@ -161,13 +173,17 @@ module.exports = async ({
 
   // Start the server and route requests
 
+  if (proxyConfig && Object.keys(proxyConfig).length > 0) { 
+    proxy = httpProxy.createProxyServer({})
+  }
+
   server((req, res) => {
     const decodePathname = decodeURI(url.parse(req.url).pathname);
     const pathname = path.normalize(decodePathname).replace(/^(\.\.(\/|\\|$))+/, '');
     res.setHeader('access-control-allow-origin', '*');
     if (reload && pathname === livereloadUrl) return serveReload(res);
-    if (!isRouteRequest(pathname) && isDir(pathname)) return serveStaticFile(res, pathname);
-    return serveRoute(res, pathname);
+    if (!isRouteRequest(pathname) && !isDir(pathname)) return serveStaticFile(res, pathname);
+    return serveRoute(req, res, pathname);
   }).listen(parseInt(port, 10), host);
 
   // Notify livereload reloadClients on file change

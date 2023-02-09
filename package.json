@@ -22,5 +22,8 @@
   "license": "MIT",
   "devDependencies": {
     "puppeteer": "^3.0.4"
+  },
+  "dependencies": {
+    "http-proxy": "^1.18.1"
   }
 }
