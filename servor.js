@@ -39,7 +39,7 @@ module.exports = async ({
     port = await usePort();
   }
 
-  proxyConfig = proxyConfig ? Object.keys(proxyConfig).map(key => [new RegExp(key), proxyConfig[key]]) : null;
+  proxyConfig = proxyConfig ? Object.keys(proxyConfig).map(key => [new RegExp(key), proxyConfig[key]]) : [];
 
   let proxy;
 
