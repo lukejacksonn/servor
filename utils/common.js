@@ -20,9 +20,13 @@ const awaitWriteFinish = (path, prev, cb) => {
 const fileWatch =
   process.platform !== 'linux'
     ? (x, cb) =>
-        fs.watch(x, { recursive: true }, (_, filename) => {
-          const fileChanged = path.join(x, filename);
-          awaitWriteFinish(fileChanged, {}, cb);
+        fs.watch(x, {recursive: true}, (_, filename) => {
+          if (filename !== null) { // filename can be null on windows
+              const fileChanged = path.join(x, filename);
+              awaitWriteFinish(fileChanged, {}, cb);
+          } else {
+              setTimeout(cb, 50);
+          }
         })
     : (x, cb) => {
         if (fs.statSync(x).isDirectory()) {
