@@ -4,9 +4,7 @@
   "description": "A dependency free dev server for single page app development",
   "repository": "lukejacksonn/servor",
   "main": "./servor.js",
-  "bin": {
-    "servor": "./cli.js"
-  },
+  "bin": "./cli.js",
   "keywords": [
     "server",
     "https",
@@ -26,5 +24,6 @@
   "dependencies": {
     "chokidar": "^3.5.3",
     "http-proxy": "^1.18.1"
-  }
+  },
+  "packageManager": "yarn@3.4.1"
 }
