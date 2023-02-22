@@ -21,6 +21,7 @@
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "chokidar": "^3.5.3",
     "puppeteer": "^3.0.4"
   },
   "dependencies": {

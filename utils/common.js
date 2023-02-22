@@ -1,7 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const net = require('net');
-const path = require('path');
+const chokidar = require("chokidar");
 
 // recursive function that checks if a file is still changing
 const awaitWriteFinish = (path, prev, cb) => {
@@ -17,23 +17,9 @@ const awaitWriteFinish = (path, prev, cb) => {
   });
 };
 
-const fileWatch =
-  process.platform !== 'linux'
-    ? (x, cb) =>
-        fs.watch(x, {recursive: true}, (_, filename) => {
-          if (filename !== null) { // filename can be null on windows
-              const fileChanged = path.join(x, filename);
-              awaitWriteFinish(fileChanged, {}, cb);
-          } else {
-              setTimeout(cb, 50);
-          }
-        })
-    : (x, cb) => {
-        if (fs.statSync(x).isDirectory()) {
-          fs.watch(x, cb);
-          fs.readdirSync(x).forEach((xx) => fileWatch(`${x}/${xx}`, cb));
-        }
-      };
+const fileWatch = (x, cb) => {
+    chokidar.watch(x).on('all', cb)
+}
 
 module.exports.fileWatch = fileWatch;
 

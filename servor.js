@@ -179,7 +179,7 @@ module.exports = async ({
 
   server((req, res) => {
     const decodePathname = decodeURI(url.parse(req.url).pathname);
-    const pathname = path.normalize(decodePathname).replace(/^(\.\.(\/|\\|$))+/, '');
+    const pathname = path.normalize(decodePathname).replace(/^(\.\.(\/|\\|$))+/, '').replaceAll('\\', '/');
     res.setHeader('access-control-allow-origin', '*');
     if (reload && pathname === livereloadUrl) return serveReload(res);
     if (!isRouteRequest(pathname) && !isDir(pathname)) return serveStaticFile(res, pathname);
