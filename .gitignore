@@ -5,6 +5,7 @@
 .DS_Store
 node_modules
 .idea
+dist
 
 # yarn
 # https://yarnpkg.com/getting-started/qa#which-files-should-be-gitignored

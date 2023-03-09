@@ -396,28 +396,14 @@ const types = {
   'application/vnd.olpc-sugar': ['xo'],
   'application/vnd.oma.dd2+xml': ['dd2'],
   'application/vnd.openofficeorg.extension': ['oxt'],
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': [
-    'pptx',
-  ],
-  'application/vnd.openxmlformats-officedocument.presentationml.slide': [
-    'sldx',
-  ],
-  'application/vnd.openxmlformats-officedocument.presentationml.slideshow': [
-    'ppsx',
-  ],
-  'application/vnd.openxmlformats-officedocument.presentationml.template': [
-    'potx',
-  ],
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['pptx'],
+  'application/vnd.openxmlformats-officedocument.presentationml.slide': ['sldx'],
+  'application/vnd.openxmlformats-officedocument.presentationml.slideshow': ['ppsx'],
+  'application/vnd.openxmlformats-officedocument.presentationml.template': ['potx'],
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['xlsx'],
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.template': [
-    'xltx',
-  ],
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [
-    'docx',
-  ],
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.template': [
-    'dotx',
-  ],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.template': ['xltx'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.template': ['dotx'],
   'application/vnd.osgeo.mapguide.package': ['mgp'],
   'application/vnd.osgi.dp': ['dp'],
   'application/vnd.osgi.subsystem': ['esa'],
@@ -433,14 +419,7 @@ const types = {
   'application/vnd.proteus.magazine': ['mgz'],
   'application/vnd.publishare-delta-tree': ['qps'],
   'application/vnd.pvi.ptid1': ['ptid'],
-  'application/vnd.quark.quarkxpress': [
-    'qxd',
-    'qxt',
-    'qwd',
-    'qwt',
-    'qxl',
-    'qxb',
-  ],
+  'application/vnd.quark.quarkxpress': ['qxd', 'qxt', 'qwd', 'qwt', 'qxl', 'qxb'],
   'application/vnd.realvnc.bed': ['bed'],
   'application/vnd.recordare.musicxml': ['mxl'],
   'application/vnd.recordare.musicxml+xml': ['musicxml'],
@@ -556,17 +535,7 @@ const types = {
   'application/x-csh': ['csh'],
   'application/x-debian-package': ['udeb'],
   'application/x-dgc-compressed': ['dgc'],
-  'application/x-director': [
-    'dir',
-    'dcr',
-    'dxr',
-    'cst',
-    'cct',
-    'cxt',
-    'w3d',
-    'fgd',
-    'swa',
-  ],
+  'application/x-director': ['dir', 'dcr', 'dxr', 'cst', 'cct', 'cxt', 'w3d', 'fgd', 'swa'],
   'application/x-doom': ['wad'],
   'application/x-dtbncx+xml': ['ncx'],
   'application/x-dtbook+xml': ['dtb'],
@@ -899,10 +868,9 @@ const types = {
   'x-conference/x-cooltalk': ['ice'],
 };
 
-const mimes = Object.entries(types).reduce(
-  (all, [type, exts]) =>
-    Object.assign(all, ...exts.map((ext) => ({ [ext]: type }))),
-  {}
+const mimes: Record<keyof typeof types, any> = Object.entries(types).reduce(
+  (all, [type, exts]) => Object.assign(all, ...exts.map((ext) => ({ [ext]: type }))),
+  {} as Record<keyof typeof types, any>
 );
 
-module.exports = (ext) => mimes[ext] || 'application/octet-stream';
+export default (ext: keyof typeof types) => mimes[ext] || 'application/octet-stream';

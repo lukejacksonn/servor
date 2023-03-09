@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-const fs = require('fs');
-const servor = require('./servor.js');
-const openBrowser = require('./utils/openBrowser.js');
+import fs from 'node:fs';
+import path from 'node:path';
+import { servor } from './servor';
+import openBrowser from './utils/openBrowser';
 
 const readCredentials = () => ({
   cert: fs.readFileSync(__dirname + '/servor.crt'),
@@ -9,16 +10,9 @@ const readCredentials = () => ({
 });
 
 const certify = () =>
-  require('child_process').execSync(__dirname + '/certify.sh', {
+  require('child_process').execSync(path.resolve(__dirname, '../certify.sh'), {
     cwd: __dirname,
   });
-
-const open =
-  process.platform == 'darwin'
-    ? 'open'
-    : process.platform == 'win32'
-    ? 'start'
-    : 'xdg-open';
 
 (async () => {
   const args = process.argv.slice(2).filter((x) => !~x.indexOf('--'));
@@ -30,14 +24,9 @@ const open =
     const dest = repo.split('/')[1];
     if (!fs.existsSync(dest)) {
       try {
-        require('child_process').execSync(
-          `git clone https://github.com/${repo}`,
-          { stdio: 'ignore' }
-        );
+        require('child_process').execSync(`git clone https://github.com/${repo}`, { stdio: 'ignore' });
       } catch (e) {
-        console.log(
-          `\n  ⚠️  Could not clone from https://github.com/${repo}\n`
-        );
+        console.log(`\n  ⚠️  Could not clone from https://github.com/${repo}\n`);
         process.exit();
       }
     }
@@ -56,7 +45,7 @@ const open =
 
   if (~process.argv.indexOf('--secure')) {
     admin && certify();
-    admin && process.platform === 'darwin' && process.setuid(501);
+    admin && process.platform === 'darwin' && process.setuid?.(501);
     try {
       credentials = readCredentials();
     } catch (e) {
@@ -64,9 +53,7 @@ const open =
       try {
         credentials = readCredentials();
       } catch (e) {
-        console.log(
-          '\n  ⚠️  There was a problem generating ssl credentials. Try removing `--secure`\n'
-        );
+        console.log('\n  ⚠️  There was a problem generating ssl credentials. Try removing `--secure`\n');
         process.exit();
       }
     }
@@ -81,8 +68,8 @@ const open =
     reload: !!~process.argv.indexOf('--reload'),
     module: !!~process.argv.indexOf('--module'),
     static: !!~process.argv.indexOf('--static'),
-    host: ( !!~process.argv.indexOf('--localhost-only') ) ? '127.0.0.1' : null,
-    noDirListing: !!~process.argv.indexOf('--no-dir-listing'), 
+    host: !!~process.argv.indexOf('--localhost-only') ? '127.0.0.1' : undefined,
+    noDirListing: !!~process.argv.indexOf('--no-dir-listing'),
     credentials,
   });
 

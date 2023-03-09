@@ -1,12 +1,12 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
-module.exports = (uri) => {
-  const dir = (x) => fs.statSync(path.join(uri, x)).isDirectory();
-  const size = (x) => fs.statSync(path.join(uri, x)).size;
+export default async (uri: string) => {
+  const dir = async (x: string) => (await fs.stat(path.join(uri, x))).isDirectory();
+  const size = async (x: string) => (await fs.stat(path.join(uri, x))).size;
 
-  const link = (x) =>
-    dir(x)
+  const link = async (x: string) =>
+    (await dir(x))
       ? `
         <div>
           <span>🗂</span>
@@ -63,7 +63,7 @@ module.exports = (uri) => {
       </head>
       <body>
         <main>
-          ${fs.readdirSync(uri).map(link).join('')}
+          ${(await fs.readdir(uri)).map(link).join('')}
         </main>
       </body>
     </html>

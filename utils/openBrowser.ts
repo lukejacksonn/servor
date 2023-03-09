@@ -1,18 +1,15 @@
-const childProcess = require('child_process');
+import childProcess from 'child_process';
 
-module.exports = (url) => {
+export default (url: string) => {
   let cmd;
   const args = [];
 
   if (process.platform === 'darwin') {
     try {
-      childProcess.execSync(
-        `osascript openChrome.applescript "${encodeURI(url)}"`,
-        {
-          cwd: __dirname,
-          stdio: 'ignore',
-        }
-      );
+      childProcess.execSync(`osascript openChrome.applescript "${encodeURI(url)}"`, {
+        cwd: __dirname,
+        stdio: 'ignore',
+      });
       return true;
     } catch (err) {}
     cmd = 'open';

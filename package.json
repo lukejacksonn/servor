@@ -1,25 +1,40 @@
 {
   "name": "servor",
-  "version": "4.0.3",
+  "version": "4.0.4",
   "description": "A dependency free dev server for single page app development",
-  "repository": "lukejacksonn/servor",
-  "main": "./servor.js",
-  "bin": "./cli.js",
+  "repository": "@mayflower-tech/servor",
+  "publishConfig": {
+    "@mayflower-tech:registry": "https://npm.pkg.github.com"
+  },
+  "type": "commonjs",
+  "main": "./dist/servor.js",
+  "bin": "./dist/cli.js",
   "keywords": [
     "server",
     "https",
     "livereload",
     "spa"
   ],
+  "files": [
+    "dist/*",
+    "servor.ts",
+    "cli.ts",
+    "utils/*"
+  ],
   "scripts": {
-    "start": "sudo node cli tests/example --reload --browse --secure --static --module",
+    "start": "node dist/cli.js tests/example --reload --browse --static --module",
+    "build": "tsc",
     "cleanup": "rm -f servor.key servor.crt",
     "test": "npm run cleanup && cd tests && node index.js"
   },
   "author": "Luke Jackson <lukejacksonn@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "puppeteer": "^3.0.4"
+    "@types/http-proxy": "^1.17.10",
+    "@types/node": "^18.14.6",
+    "prettier": "^2.8.4",
+    "puppeteer": "^3.0.4",
+    "typescript": "^4.9.5"
   },
   "dependencies": {
     "chokidar": "^3.5.3",
